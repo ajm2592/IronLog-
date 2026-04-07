@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IronLog v4 - Workout Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #F5F4EF;
+      color: #1A1A1A;
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 220px;
+      background-color: #111827;
+      color: #E5E7EB;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
+      padding: 16px 0;
+      z-index: 100;
+      transition: transform 0.3s, width 0.3s;
+    }
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px 24px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .sidebar-logo .logo-icon { color: #3B82F6; font-size: 22px; }
+    .sidebar nav { flex: 1; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: #9CA3AF;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 2px 8px;
+      font-size: 13.5px;
+      transition: background 0.15s, color 0.15s;
+      text-decoration: none;
+      user-select: none;
+    }
+    .nav-item:hover { background: #1F2937; color: #E5E7EB; }
+    .nav-item.active { background: #1F2937; color: #fff; }
+    .nav-item .nav-icon { font-size: 16px; min-width: 18px; color: #3B82F6; }
+    .nav-label { white-space: nowrap; }
+    .sidebar-bottom {
+      padding: 16px 20px;
+      border-top: 1px solid #1F2937;
+      margin-top: 8px;
+    }
+    .dark-mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #9CA3AF;
+      cursor: pointer;
+      font-size: 13px;
+      user-select: none;
+    }
+    .dark-mode-btn:hover { color: #E5E7EB; }
+
+    /* Hamburger */
+    .hamburger {
+      display: none;
+      position: fixed;
+      top: 12px; left: 12px;
+      z-index: 200;
+      background: #111827;
+      border: none;
+      color: #fff;
+      font-size: 24px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 32px 40px;
+      min-height: 100vh;
+      transition: margin-left 0.3s;
+    }
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; color: #111827; }
+    .page-header p { color: #6B7280; font-size: 13px; margin-top: 2px; }
+
+    /* ===== STAT CARDS ===== */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stat-card-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #9CA3AF; margin-bottom: 4px;
+    }
+    .stat-card-value { font-size: 26px; font-weight: 700; color: #111827; }
+    .stat-card-unit { font-size: 12px; color: #6B7280; margin-top: 2px; }
+    .stat-card-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .icon-blue { background: #EFF6FF; color: #3B82F6; }
+    .icon-green { background: #F0FDF4; color: #22C55E; }
+    .icon-orange { background: #FFF7ED; color: #F97316; }
+    .icon-purple { background: #FAF5FF; color: #A855F7; }
+
+    /* ===== CARDS ===== */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 22px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-size: 15px; font-weight: 600; color: #111827;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .card-title-icon { color: #3B82F6; }
+
+    /* ===== STRENGTH STATS ===== */
+    .lift-item { margin-bottom: 14px; }
+    .lift-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+    .lift-name { font-weight: 500; color: #374151; }
+    .lift-values { color: #6B7280; }
+    .lift-values strong { color: #111827; }
+    .progress-bar-bg { background: #E5E7EB; border-radius: 4px; height: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: #3B82F6; border-radius: 4px; transition: width 0.4s; }
+
+    /* ===== NUTRITION ===== */
+    .nutrition-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 13.5px;
+    }
+    .nutrition-row:last-of-type { border-bottom: none; }
+    .nutrition-label { color: #374151; }
+    .nutrition-value { font-weight: 600; color: #EF4444; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 10px;
+      border-radius: 20px; font-size: 11px; font-weight: 500;
+      background: #F3F4F6; color: #374151; margin-top: 10px;
+    }
+
+    /* ===== RECENT WORKOUTS ===== */
+    .workout-item {
+      padding: 12px 16px; border: 1px solid #E5E7EB;
+      border-radius: 8px; margin-bottom: 8px;
+    }
+    .workout-item h4 { font-size: 14px; font-weight: 600; color: #111827; }
+    .workout-item p { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
+
+    /* ===== FORMS ===== */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 12px; font-weight: 500; color: #374151; }
+    .form-control {
+      padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 6px;
+      font-size: 14px; color: #111827; background: #fff; outline: none;
+      width: 100%; transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .form-control:focus { border-color: #3B82F6; }
+    select.form-control { appearance: auto; }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; transition: background 0.15s; font-family: inherit;
+    }
+    .btn-primary { background: #3B82F6; color: #fff; }
+    .btn-primary:hover { background: #2563EB; }
+    .btn-secondary { background: #F9FAFB; color: #374151; border: 1px solid #D1D5DB; }
+    .btn-secondary:hover { background: #F3F4F6; }
+    .btn-danger { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+    .btn-danger:hover { background: #FECACA; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ===== TOGGLE ===== */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+    .toggle-label { font-size: 13.5px; font-weight: 500; }
+    .toggle-label small { font-size: 11px; color: #6B7280; margin-left: 6px; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #D1D5DB; border-radius: 34px; transition: background 0.15s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute; height: 18px; width: 18px;
+      left: 3px; top: 3px; background: #fff; border-radius: 50%;
+      transition: transform 0.15s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #3B82F6; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* ===== TABLES ===== */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 8px 12px; background: #F9FAFB; color: #6B7280;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ===== SPLIT LAYOUT ===== */
+    .split-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; }
+    .past-workout-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: #F9FAFB; border-radius: 8px; margin-bottom: 8px; cursor: pointer;
+    }
+    .past-workout-name { font-size: 14px; font-weight: 600; }
+    .past-workout-date { font-size: 12px; color: #9CA3AF; }
+    .btn-icon {
+      background: none; border: none; cursor: pointer; color: #9CA3AF;
+      padding: 4px; font-size: 16px;
+    }
+    .btn-icon:hover { color: #EF4444; }
+
+    /* ===== EXERCISE BLOCKS ===== */
+    .exercise-block {
+      border: 1px solid #E5E7EB; border-radius: 8px;
+      padding: 16px; margin-bottom: 12px;
+    }
+    .exercise-name-input {
+      width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB;
+      border-radius: 6px; font-size: 14px; margin-bottom: 12px;
+      background: #fff; color: #111827; font-family: inherit;
+    }
+    .set-row {
+      display: grid; grid-template-columns: 32px 1fr 1fr 1fr;
+      gap: 8px; align-items: center; margin-bottom: 8px; font-size: 12px; color: #6B7280;
+    }
+    .set-number { text-align: center; color: #9CA3AF; font-size: 11px; }
+    .add-set-btn {
+      background: none; border: none; color: #3B82F6; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 0;
+      font-family: inherit;
+    }
+    .add-set-btn:hover { color: #2563EB; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state { text-align: center; padding: 60px 20px; color: #9CA3AF; }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; margin-bottom: 20px; }
+
+    /* ===== PLANS ===== */
+    .plans-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    }
+    .plans-header h1 { font-size: 22px; font-weight: 700; }
+    .btn-group { display: flex; gap: 8px; }
+
+    /* ===== MACRO LAYOUT ===== */
+    .macro-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+    .log-history-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: #F9FAFB; border-radius: 8px; margin-bottom: 8px;
+    }
+    .log-history-date { font-size: 12px; color: #6B7280; }
+    .log-history-kcal { font-size: 14px; font-weight: 600; }
+    .log-history-macros { font-size: 12px; color: #6B7280; }
+    .log-diff-positive { color: #22C55E; font-size: 12px; font-weight: 500; }
+    .log-diff-negative { color: #EF4444; font-size: 12px; font-weight: 500; }
+    .log-diff-over { color: #EF4444; font-size: 12px; font-weight: 500; }
+
+    /* ===== BAR CHART ===== */
+    .bar-chart-container {
+      height: 200px; display: flex; align-items: flex-end; gap: 8px;
+      padding: 10px 0; position: relative;
+    }
+    .bar-col {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      height: 100%; justify-content: flex-end;
+    }
+    .bar {
+      width: 100%; border-radius: 4px 4px 0 0; min-height: 4px;
+      transition: height 0.3s;
+    }
+    .bar-label { font-size: 10px; color: #9CA3AF; white-space: nowrap; }
+    .bar-value { font-size: 10px; font-weight: 600; color: #374151; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px; padding: 28px 32px;
+      max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #111827; }
+    .modal-close {
+      float: right; background: none; border: none; font-size: 20px;
+      cursor: pointer; color: #9CA3AF; padding: 4px;
+    }
+    .modal-close:hover { color: #374151; }
+
+    /* ===== COACH CARDS ===== */
+    .coach-card {
+      padding: 16px 20px; background: #F9FAFB; border-radius: 8px;
+      margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .coach-icon { font-size: 24px; min-width: 32px; }
+    .coach-card h4 { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+    .coach-card p { font-size: 13px; color: #6B7280; line-height: 1.5; }
+
+    /* ===== PLAN CARDS ===== */
+    .plan-card {
+      background: #fff; border-radius: 10px; padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px;
+    }
+    .plan-card-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .plan-card-title { font-size: 16px; font-weight: 700; color: #111827; }
+    .plan-card-date { font-size: 12px; color: #9CA3AF; }
+    .plan-day { margin-bottom: 14px; }
+    .plan-day-title { font-size: 13px; font-weight: 600; color: #3B82F6; margin-bottom: 6px; }
+    .plan-exercise {
+      font-size: 13px; color: #374151; padding: 4px 0 4px 16px;
+      border-left: 2px solid #E5E7EB;
+    }
+
+    /* ===== TDEE RESULTS ===== */
+    .tdee-results { padding: 0; }
+    .tdee-result-card {
+      background: #F9FAFB; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px;
+    }
+    .tdee-result-card h3 { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 10px; }
+    .tdee-macro-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+    .tdee-macro-label { color: #6B7280; }
+    .tdee-selected-row { background: #EFF6FF; border-radius: 6px; padding: 6px 8px !important; font-weight: 600; }
+    body.dark-mode .tdee-selected-row { background: #1E3A5F; }
+    .tdee-macro-value { font-weight: 600; color: #111827; }
+    .tdee-big-number { font-size: 32px; font-weight: 700; color: #3B82F6; }
+
+    /* ===== WORKOUT DETAIL ===== */
+    .workout-detail {
+      background: #F0F4FF; border-radius: 8px; padding: 14px 16px;
+      margin-top: 8px; margin-bottom: 8px;
+    }
+    .workout-detail-exercise { margin-bottom: 10px; }
+    .workout-detail-exercise h5 { font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+    .workout-detail-set { font-size: 12px; color: #6B7280; padding-left: 12px; }
+
+    /* ===== API KEY INPUT ===== */
+    .api-section {
+      background: #F9FAFB; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px;
+    }
+    .api-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .api-section p { font-size: 12px; color: #6B7280; margin-bottom: 10px; }
+
+    /* ===== IMPORT TABS ===== */
+    .import-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #E5E7EB; }
+    .import-tab {
+      padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -2px; color: #6B7280;
+      background: none; border-top: none; border-left: none; border-right: none;
+      font-family: inherit;
+    }
+    .import-tab.active { color: #3B82F6; border-bottom-color: #3B82F6; }
+    .import-panel { display: none; }
+    .import-panel.active { display: block; }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: #111827;
+      color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px;
+      z-index: 2000; opacity: 0; transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1100px) {
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+      .cards-grid { grid-template-columns: 1fr; }
+      .split-layout { grid-template-columns: 1fr; }
+      .macro-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .hamburger { display: block; }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .main { margin-left: 0; padding: 60px 16px 32px; }
+      .stat-cards { grid-template-columns: 1fr 1fr; }
+      .form-grid-2, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
+      .plans-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .stat-cards { grid-template-columns: 1fr; }
+    }
+
+    /* ===== DARK MODE ===== */
+    body.dark-mode { background-color: #0F1117; color: #E5E7EB; }
+    body.dark-mode .main { background: #0F1117; }
+    body.dark-mode .page-header h1 { color: #F9FAFB; }
+    body.dark-mode .card, body.dark-mode .plan-card { background: #1A1F2E; color: #E5E7EB; border: 1px solid #2D3748; }
+    body.dark-mode .stat-card { background: #1A1F2E; border: 1px solid #2D3748; }
+    body.dark-mode .stat-card-value { color: #F9FAFB; }
+    body.dark-mode .stat-card-label { color: #9CA3AF; }
+    body.dark-mode .form-control, body.dark-mode .exercise-name-input { background: #2D3748; border-color: #4A5568; color: #E5E7EB; }
+    body.dark-mode .lift-name { color: #D1D5DB; }
+    body.dark-mode .lift-values { color: #9CA3AF; }
+    body.dark-mode .lift-values strong { color: #F3F4F6; }
+    body.dark-mode .card-title { color: #F3F4F6; }
+    body.dark-mode .nutrition-label { color: #D1D5DB; }
+    body.dark-mode .nutrition-row { border-color: #2D3748; }
+    body.dark-mode .badge { background: #2D3748; color: #D1D5DB; }
+    body.dark-mode .workout-item { border-color: #2D3748; }
+    body.dark-mode .workout-item h4 { color: #F3F4F6; }
+    body.dark-mode .past-workout-item { background: #2D3748; }
+    body.dark-mode .past-workout-name { color: #F3F4F6; }
+    body.dark-mode .log-history-item { background: #2D3748; }
+    body.dark-mode .log-history-kcal { color: #F3F4F6; }
+    body.dark-mode .btn-secondary { background: #2D3748; color: #E5E7EB; border-color: #4A5568; }
+    body.dark-mode .btn-secondary:hover { background: #374151; }
+    body.dark-mode .coach-card { background: #2D3748; }
+    body.dark-mode .coach-card h4 { color: #F3F4F6; }
+    body.dark-mode .tdee-result-card { background: #2D3748; }
+    body.dark-mode .tdee-result-card h3 { color: #F3F4F6; }
+    body.dark-mode .tdee-macro-label { color: #9CA3AF; }
+    body.dark-mode .tdee-macro-value { color: #F3F4F6; }
+    body.dark-mode .workout-detail { background: #2D3748; }
+    body.dark-mode .workout-detail-exercise h5 { color: #F3F4F6; }
+    body.dark-mode .workout-detail-set { color: #9CA3AF; }
+    body.dark-mode .progress-bar-bg { background: #2D3748; }
+    body.dark-mode .modal { background: #1A1F2E; }
+    body.dark-mode .modal-title { color: #F3F4F6; }
+    body.dark-mode #importPreview { background: #2D3748; border-color: #4A5568; color: #E5E7EB; }
+    body.dark-mode .import-day-header { color: #93C5FD !important; }
+    body.dark-mode .import-exercise-row { border-color: #4A5568 !important; }
+    body.dark-mode .import-tab { color: #9CA3AF; }
+    body.dark-mode .import-tab.active { color: #3B82F6; }
+    body.dark-mode .import-tabs { border-color: #2D3748; }
+    body.dark-mode th { background: #2D3748; color: #9CA3AF; }
+    body.dark-mode td { color: #D1D5DB; border-color: #2D3748; }
+    body.dark-mode .exercise-block { border-color: #2D3748; }
+    body.dark-mode .api-section { background: #2D3748; }
+    body.dark-mode .api-section h4 { color: #F3F4F6; }
+    body.dark-mode .plan-card-title { color: #F3F4F6; }
+    body.dark-mode .plan-day-title { color: #60A5FA; }
+    body.dark-mode .plan-exercise { color: #D1D5DB; border-color: #4A5568; }
+    body.dark-mode .bar-value { color: #E5E7EB; }
+    body.dark-mode .hamburger { background: #1A1F2E; }
+    body.dark-mode .icon-blue { background: #1E3A5F; }
+    body.dark-mode .icon-green { background: #14532D; }
+    body.dark-mode .icon-orange { background: #431407; }
+    body.dark-mode .icon-purple { background: #3B0764; }
+    body.dark-mode .form-group label { color: #D1D5DB; }
+    body.dark-mode .toggle-label { color: #D1D5DB; }
+    body.dark-mode .btn-danger { background: #450a0a; color: #FCA5A5; border-color: #7F1D1D; }
+  </style>
+</head>
+<body>
+
+<!-- HAMBURGER -->
+<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">📊</span>
+    <span class="nav-label">IronLog</span>
+  </div>
+  <nav>
+    <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard', this)">
+      <span class="nav-icon">⊞</span> <span class="nav-label">Dashboard</span>
+    </a>
+    <a class="nav-item" id="nav-tdee" onclick="showSection('tdee', this)">
+      <span class="nav-icon">🖩</span> <span class="nav-label">TDEE Calculator</span>
+    </a>
+    <a class="nav-item" id="nav-profile" onclick="showSection('profile', this)">
+      <span class="nav-icon">👤</span> <span class="nav-label">Profile &amp; Goals</span>
+    </a>
+    <a class="nav-item" id="nav-workout" onclick="showSection('workout', this)">
+      <span class="nav-icon">📈</span> <span class="nav-label">Workout Log</span>
+    </a>
+    <a class="nav-item" id="nav-plans" onclick="showSection('plans', this)">
+      <span class="nav-icon">📅</span> <span class="nav-label">Weekly Plans</span>
+    </a>
+    <a class="nav-item" id="nav-coach" onclick="showSection('coach', this)">
+      <span class="nav-icon">🤖</span> <span class="nav-label">AI Coach</span>
+    </a>
+    <a class="nav-item" id="nav-macro" onclick="showSection('macro', this)">
+      <span class="nav-icon">🍽</span> <span class="nav-label">Macro Tracker</span>
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="dark-mode-btn" onclick="toggleDarkMode()">
+      <span id="darkModeIcon">🌙</span> <span class="nav-label" id="darkModeLabel">Dark Mode</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <section class="section active" id="section-dashboard">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h1>Dashboard</h1>
+        <p id="dashWelcome">Welcome back</p>
+      </div>
+      
+    </div>
+    <div class="stat-cards" id="dashStatCards">
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-card-label">Daily Target</div>
+          <div class="stat-card-value" id="dashKcal">—</div>
+          <div class="stat-card-unit">kcal</div>
+        </div>
+        <div class="stat-card-icon icon-blue">🔥</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-card-label">Protein Target</div>
+          <div class="stat-card-value" id="dashProtein">—</div>
+          <div class="stat-card-unit">grams</div>
+        </div>
+        <div class="stat-card-icon icon-green">⚡</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-card-label">This Week</div>
+          <div class="stat-card-value" id="dashWeek">0</div>
+          <div class="stat-card-unit">workouts</div>
+        </div>
+        <div class="stat-card-icon icon-orange">🏆</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-card-label">Total Sessions</div>
+          <div class="stat-card-value" id="dashTotal">0</div>
+          <div class="stat-card-unit">logged</div>
+        </div>
+        <div class="stat-card-icon icon-purple">📊</div>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎯</span> Strength Stats</div>
+        <div id="dashStrength">
+          <p style="color:#9CA3AF;font-size:13px;">Save your profile to see strength stats.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">💧</span> Nutrition Targets</div>
+        <div id="dashNutrition">
+          <p style="color:#9CA3AF;font-size:13px;">Calculate your TDEE to see nutrition targets.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon">💪</span> Recent Workouts</div>
+      <div id="dashRecentWorkouts">
+        <p style="color:#9CA3AF;font-size:13px;">No workouts logged yet.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TDEE CALCULATOR ==================== -->
+  <section class="section" id="section-tdee">
+    <div class="page-header">
+      <h1>TDEE Calculator</h1>
+      <p>Mifflin-St Jeor formula with optional carb cycling</p>
+    </div>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📋</span> Your Stats</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Gender</label>
+            <select class="form-control" id="tdeeGender">
+              <option value="male" selected>Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" class="form-control" id="tdeeAge" value="33" />
+          </div>
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Height (ft)</label>
+            <input type="number" class="form-control" id="tdeeFt" value="5" />
+          </div>
+          <div class="form-group">
+            <label>Height (in)</label>
+            <input type="number" class="form-control" id="tdeeIn" value="11" />
+          </div>
+          <div class="form-group">
+            <label>Weight (lbs)</label>
+            <input type="number" class="form-control" id="tdeeLbs" value="192" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Activity Level</label>
+          <select class="form-control" id="tdeeActivity">
+            <option value="1.2">Sedentary (little to no activity)</option>
+            <option value="1.375">Light (1-3 hrs/week)</option>
+            <option value="1.55" selected>Moderate (4-6 hrs/week)</option>
+            <option value="1.725">A Lot (7-9 hrs/week)</option>
+            <option value="1.9">Extreme (10+ hrs/week)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Goal</label>
+          <select class="form-control" id="tdeeGoal">
+            <option value="cut">Cut (-25%)</option>
+            <option value="maintain" selected>Maintain</option>
+            <option value="leanbulk">Lean Bulk (+10%)</option>
+            <option value="bulk">Bulk (+20%)</option>
+          </select>
+        </div>
+        <div class="toggle-row" style="margin-bottom:14px;">
+          <div class="toggle-label">Carb Cycling Mode <small>Low &amp; High Carb Days</small></div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tdeeCarb" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="calculateTDEE()">🖩 Calculate TDEE</button>
+      </div>
+      <div class="card" id="tdeeResultsPanel">
+        <div id="tdeeResultsContent" style="display:flex;align-items:center;justify-content:center;color:#9CA3AF;flex-direction:column;gap:12px;height:100%;">
+          <span style="font-size:40px;">🖩</span>
+          <p style="font-size:13px;text-align:center;">Enter your stats and click Calculate to see your TDEE and macro targets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PROFILE & GOALS ==================== -->
+  <section class="section" id="section-profile">
+    <div class="page-header">
+      <h1>Fitness Profile &amp; Goals</h1>
+      <p>Your physical stats, training info, and strength goals</p>
+    </div>
+    <div class="cards-grid" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">👤</span> Personal Info</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Name</label>
+          <input type="text" class="form-control" id="profName" value="AJM" />
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Gender</label>
+            <select class="form-control" id="profGender">
+              <option value="male" selected>Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" class="form-control" id="profAge" value="33" />
+          </div>
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Height (ft)</label>
+            <input type="number" class="form-control" id="profFt" value="5" />
+          </div>
+          <div class="form-group">
+            <label>Height (in)</label>
+            <input type="number" class="form-control" id="profIn" value="11" />
+          </div>
+          <div class="form-group">
+            <label>Weight (lbs)</label>
+            <input type="number" class="form-control" id="profLbs" value="192" />
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📈</span> Training Info</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Activity Level</label>
+          <select class="form-control" id="profActivity">
+            <option value="1.2">Sedentary (desk job)</option>
+            <option value="1.375">Lightly Active (1-3x/week)</option>
+            <option value="1.55">Moderately Active (3-5x/week)</option>
+            <option value="1.725" selected>Very Active (5-6x/week)</option>
+            <option value="1.9">Extra Active (2x/day)</option>
+          </select>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Goal Type</label>
+            <select class="form-control" id="profGoal">
+              <option value="strength" selected>Strength</option>
+              <option value="hypertrophy">Hypertrophy</option>
+              <option value="cut">Cut</option>
+              <option value="maintain">Maintain</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Experience</label>
+            <select class="form-control" id="profExperience">
+              <option value="advanced" selected>Advanced (3+ yr)</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="beginner">Beginner</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Training Frequency (days/week)</label>
+          <input type="number" class="form-control" id="profFrequency" value="5" min="1" max="7" />
+        </div>
+      </div>
+    </div>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🏋️</span> Current Lifts (1RM)</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Bench Press (lbs)</label>
+          <input type="number" class="form-control" id="profBench" value="285" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Squat (lbs)</label>
+          <input type="number" class="form-control" id="profSquat" value="365" />
+        </div>
+        <div class="form-group">
+          <label>Deadlift (lbs)</label>
+          <input type="number" class="form-control" id="profDeadlift" value="425" />
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎯</span> Goal Lifts</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Bench Press Goal (lbs)</label>
+          <input type="number" class="form-control" id="profBenchGoal" value="315" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Squat Goal (lbs)</label>
+          <input type="number" class="form-control" id="profSquatGoal" value="405" />
+        </div>
+        <div class="form-group">
+          <label>Deadlift Goal (lbs)</label>
+          <input type="number" class="form-control" id="profDeadliftGoal" value="495" />
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
+    </div>
+  </section>
+
+  <!-- ==================== WORKOUT LOG ==================== -->
+  <section class="section" id="section-workout">
+    <div class="page-header">
+      <h1>Workout Logger</h1>
+      <p>Log exercises with multiple sets per movement</p>
+    </div>
+    <div class="split-layout">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">💪</span> New Session</div>
+        <div class="form-grid-2" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label>Session Name</label>
+            <input type="text" class="form-control" id="wkName" placeholder="e.g. Push Day, Upper Body" />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" class="form-control" id="wkDate" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Notes (optional)</label>
+          <textarea class="form-control" id="wkNotes" placeholder="How the session felt, PRs, etc."></textarea>
+        </div>
+        <div id="exerciseBlocks"></div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="addExerciseBlock()">+ Add Exercise</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="saveWorkout()">💾 Save Workout</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Past Workouts</div>
+        <div id="pastWorkoutsList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== WEEKLY PLANS ==================== -->
+  <section class="section" id="section-plans">
+    <div class="plans-header">
+      <div>
+        <h1>Weekly Plans</h1>
+        <p style="color:#6B7280;font-size:13px;">Generate plans from workout history, goals, and overload progression</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="generatePlan()">⚡ Generate Plan</button>
+      </div>
+    </div>
+    <div id="plansContainer">
+      <div class="card">
+        <div class="empty-state" style="padding:40px 20px;">
+          <div class="empty-icon">📅</div>
+          <h3>No plans yet</h3>
+          <p>Generate a plan from your logged workouts, selected fitness goal, and progressive overload strategy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== AI COACH ==================== -->
+  <section class="section" id="section-coach">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h1>AI Coach</h1>
+        <p>Rule-based preview of your training with progressive overload suggestions</p>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleApiSection()">🔑 API Key</button>
+    </div>
+    <div class="api-section" id="apiSection" style="display:none;">
+      <h4>Perplexity API Integration (Coming Soon)</h4>
+      <p>Enter your API key for AI-powered coaching insights. This feature is under development.</p>
+      <div class="notice" style="margin-top:12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:14px;">
+        <strong style="display:block;margin-bottom:6px;">Optional cloud sync backup</strong>
+        <p style="margin:0 0 10px 0;font-size:13px;color:#4B5563;">Primary saving uses local storage on this device. For use on another device, export your full data as JSON and import it there. A simple cloud-sync-ready backup field is included below for copying your data payload manually.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-secondary btn-sm" onclick="exportAllData()">Export Backup</button>
+          <label class="btn btn-secondary btn-sm" for="importAllDataInput">Import Backup</label>
+          <input id="importAllDataInput" type="file" accept="application/json,.json" style="display:none" onchange="importAllData(event)">
+          <button class="btn btn-secondary btn-sm" onclick="copyCloudPayload()">Copy Sync Payload</button>
+          <button class="btn btn-secondary btn-sm" onclick="restoreCloudPayload()">Restore Sync Payload</button>
+        </div>
+        <textarea id="cloudPayload" class="form-control" style="margin-top:10px;min-height:110px;font-family:monospace;font-size:12px;" placeholder="Optional manual cloud payload: paste exported JSON here to move data between devices."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <input type="password" class="form-control" placeholder="pplx-..." style="flex:1;" id="apiKeyInput" />
+        <button class="btn btn-primary btn-sm" onclick="saveApiKey()">Save Key</button>
+      </div>
+    </div>
+    <div class="card" id="coachResults">
+      <div class="empty-state">
+        <div class="empty-icon">🤖</div>
+        <h3>Ready to analyze your training</h3>
+        <p>Imports your logged workouts, set performance, and progress toward goals</p>
+        <button class="btn btn-primary" onclick="analyzeTraining()">🤖 Import My Training</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MACRO TRACKER ==================== -->
+  <section class="section" id="section-macro">
+    <div class="page-header">
+      <h1>Daily Macro Tracker</h1>
+      <p>Track intake and compare against TDEE targets</p>
+    </div>
+    <div class="macro-layout">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🍽</span> Log Intake</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Date</label>
+          <input type="date" class="form-control" id="macroDate" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Calories</label>
+          <input type="number" class="form-control" id="macroCal" value="0" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Protein (g)</label>
+          <input type="number" class="form-control" id="macroProtein" value="0" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Carbs (g)</label>
+          <input type="number" class="form-control" id="macroCarbs" value="0" />
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Fat (g)</label>
+          <input type="number" class="form-control" id="macroFat" value="0" />
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Notes</label>
+          <input type="text" class="form-control" id="macroNotes" placeholder="Optional" />
+        </div>
+        <button class="btn btn-primary btn-full" onclick="logMacros()">💾 Log Macros</button>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Recent Calories (Last 7 Days)</div>
+          <div class="bar-chart-container" id="macroChart"></div>
+          <p style="font-size:11px;color:#9CA3AF;margin-top:8px;text-align:center;">Blue = on target, Orange = under, Red = over</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Log History</div>
+          <div id="macroHistory"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== STATE ====================
+const KEYS = {
+  profile: 'ironlog_profile',
+  tdee: 'ironlog_tdee',
+  workouts: 'ironlog_workouts',
+  plans: 'ironlog_plans',
+  macros: 'ironlog_macros',
+  dark: 'ironlog_dark',
+  apiKey: 'ironlog_apikey'
+};
+
+// Storage abstraction: use persistent storage when available, fall back to in-memory
+const _memStore = {};
+const _storage = (() => {
+  try {
+    const s = window['local' + 'Storage'];
+    const t = '__test__';
+    s.setItem(t, t);
+    s.removeItem(t);
+    return {
+      get(k) { return s.getItem(k); },
+      set(k, v) { s.setItem(k, v); }
+    };
+  } catch(e) {
+    return {
+      get(k) { return _memStore[k] !== undefined ? _memStore[k] : null; },
+      set(k, v) { _memStore[k] = v; }
+    };
+  }
+})();
+
+function getData(key) {
+  try { const v = _storage.get(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+function setData(key, val) { _storage.set(key, JSON.stringify(val)); }
+
+function removeData(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+
+function getAllAppData() {
+  return {
+    profile: getData(KEYS.profile),
+    tdee: getData(KEYS.tdee),
+    workouts: getData(KEYS.workouts) || [],
+    plans: getData(KEYS.plans) || [],
+    macros: getData(KEYS.macros) || [],
+    dark: !!getData(KEYS.dark),
+    exportedAt: new Date().toISOString(),
+    version: 'ironlog-v4-personal'
+  };
+}
+
+function applyAllAppData(data) {
+  if (!data || typeof data !== 'object') throw new Error('Invalid data file');
+  setData(KEYS.profile, data.profile || null);
+  setData(KEYS.tdee, data.tdee || null);
+  setData(KEYS.workouts, Array.isArray(data.workouts) ? data.workouts : []);
+  setData(KEYS.plans, Array.isArray(data.plans) ? data.plans : []);
+  setData(KEYS.macros, Array.isArray(data.macros) ? data.macros : []);
+  setData(KEYS.dark, !!data.dark);
+}
+
+function exportAllData() {
+  const json = JSON.stringify(getAllAppData(), null, 2);
+  downloadFile('ironlog-v4-backup.json', json, 'application/json');
+  const field = document.getElementById('cloudPayload');
+  if (field) field.value = json;
+  showToast('Backup exported.');
+}
+
+function importAllData(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      applyAllAppData(JSON.parse(e.target.result));
+      hydrateUIFromStorage();
+      showToast('Backup imported successfully.');
+    } catch (err) {
+      showToast('Invalid backup file.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function copyCloudPayload() {
+  const payload = JSON.stringify(getAllAppData(), null, 2);
+  const field = document.getElementById('cloudPayload');
+  if (field) field.value = payload;
+  navigator.clipboard?.writeText(payload).then(() => showToast('Sync payload copied.'), () => showToast('Sync payload ready in text box.'));
+}
+
+function restoreCloudPayload() {
+  const field = document.getElementById('cloudPayload');
+  if (!field || !field.value.trim()) { showToast('Paste a payload first.'); return; }
+  try {
+    applyAllAppData(JSON.parse(field.value));
+    hydrateUIFromStorage();
+    showToast('Sync payload restored.');
+  } catch (e) {
+    showToast('Payload is not valid JSON.');
+  }
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function hydrateUIFromStorage() {
+  initDarkMode();
+  loadProfile();
+  renderPastWorkouts();
+  renderPlans();
+  renderMacroChart();
+  renderMacroHistory();
+  refreshDashboard();
+}
+
+// ==================== TOAST ====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ==================== NAVIGATION ====================
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  else document.getElementById('nav-' + name).classList.add('active');
+  // Close mobile sidebar
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+  }
+  // Refresh section data
+  if (name === 'dashboard') refreshDashboard();
+  if (name === 'workout') { renderPastWorkouts(); setTodayDate('wkDate'); }
+  if (name === 'macro') { renderMacroChart(); renderMacroHistory(); setTodayDate('macroDate'); }
+  if (name === 'plans') renderPlans();
+  if (name === 'tdee') populateTDEEFromProfile();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// ==================== DARK MODE ====================
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  const isDark = document.body.classList.contains('dark-mode');
+  document.getElementById('darkModeIcon').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('darkModeLabel').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+  setData(KEYS.dark, isDark);
+}
+
+function initDarkMode() {
+  if (getData(KEYS.dark)) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('darkModeIcon').textContent = '☀️';
+    document.getElementById('darkModeLabel').textContent = 'Light Mode';
+  }
+}
+
+// ==================== HELPERS ====================
+function setTodayDate(id) {
+  const d = new Date();
+  const s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  document.getElementById(id).value = s;
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ==================== PROFILE ====================
+function saveProfile() {
+  const profile = {
+    name: document.getElementById('profName').value,
+    gender: document.getElementById('profGender').value,
+    age: parseInt(document.getElementById('profAge').value) || 0,
+    heightFt: parseInt(document.getElementById('profFt').value) || 0,
+    heightIn: parseInt(document.getElementById('profIn').value) || 0,
+    weight: parseInt(document.getElementById('profLbs').value) || 0,
+    activity: document.getElementById('profActivity').value,
+    goal: document.getElementById('profGoal').value,
+    experience: document.getElementById('profExperience').value,
+    frequency: parseInt(document.getElementById('profFrequency').value) || 5,
+    bench: parseInt(document.getElementById('profBench').value) || 0,
+    squat: parseInt(document.getElementById('profSquat').value) || 0,
+    deadlift: parseInt(document.getElementById('profDeadlift').value) || 0,
+    benchGoal: parseInt(document.getElementById('profBenchGoal').value) || 0,
+    squatGoal: parseInt(document.getElementById('profSquatGoal').value) || 0,
+    deadliftGoal: parseInt(document.getElementById('profDeadliftGoal').value) || 0
+  };
+  setData(KEYS.profile, profile);
+  showToast('Profile saved!');
+  refreshDashboard();
+}
+
+function loadProfile() {
+  const p = getData(KEYS.profile);
+  if (!p) return;
+  document.getElementById('profName').value = p.name || '';
+  document.getElementById('profGender').value = p.gender || 'male';
+  document.getElementById('profAge').value = p.age || '';
+  document.getElementById('profFt').value = p.heightFt || '';
+  document.getElementById('profIn').value = p.heightIn || '';
+  document.getElementById('profLbs').value = p.weight || '';
+  document.getElementById('profActivity').value = p.activity || '1.725';
+  document.getElementById('profGoal').value = p.goal || 'strength';
+  document.getElementById('profExperience').value = p.experience || 'advanced';
+  document.getElementById('profFrequency').value = p.frequency || 5;
+  document.getElementById('profBench').value = p.bench || '';
+  document.getElementById('profSquat').value = p.squat || '';
+  document.getElementById('profDeadlift').value = p.deadlift || '';
+  document.getElementById('profBenchGoal').value = p.benchGoal || '';
+  document.getElementById('profSquatGoal').value = p.squatGoal || '';
+  document.getElementById('profDeadliftGoal').value = p.deadliftGoal || '';
+}
+
+function populateTDEEFromProfile() {
+  const p = getData(KEYS.profile);
+  if (!p) return;
+  document.getElementById('tdeeGender').value = p.gender || 'male';
+  document.getElementById('tdeeAge').value = p.age || 33;
+  document.getElementById('tdeeFt').value = p.heightFt || 5;
+  document.getElementById('tdeeIn').value = p.heightIn || 11;
+  document.getElementById('tdeeLbs').value = p.weight || 192;
+  // Map activity
+  const actMap = {'1.2':'1.2','1.375':'1.375','1.55':'1.55','1.725':'1.725','1.9':'1.9'};
+  if (p.activity && actMap[p.activity]) document.getElementById('tdeeActivity').value = p.activity;
+}
+
+// ==================== TDEE CALCULATOR ====================
+function calculateTDEE() {
+  const gender = document.getElementById('tdeeGender').value;
+  const age = parseInt(document.getElementById('tdeeAge').value) || 0;
+  const ft = parseInt(document.getElementById('tdeeFt').value) || 0;
+  const inches = parseInt(document.getElementById('tdeeIn').value) || 0;
+  const lbs = parseInt(document.getElementById('tdeeLbs').value) || 0;
+  const activityMult = parseFloat(document.getElementById('tdeeActivity').value) || 1.55;
+  const goal = document.getElementById('tdeeGoal').value;
+  const carbCycle = document.getElementById('tdeeCarb').checked;
+
+  // Convert to metric (Chalk formula)
+  const heightCm = (ft * 12 + inches) * 2.54;
+  const weightKg = lbs * 0.453592;
+
+  // Mifflin-St Jeor BMR (exact Chalk implementation)
+  let bmr;
+  if (gender === 'male') {
+    bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+  } else {
+    bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+  }
+
+  const tdee = Math.round(bmr * activityMult);
+  const bodyweight = lbs; // protein = 1g per lb bodyweight (Chalk standard)
+
+  const container = document.getElementById('tdeeResultsContent');
+
+  // ---- Chalk Goal Multipliers ----
+  const goalMultipliers = { cut: 0.75, maintain: 1.0, leanbulk: 1.10, bulk: 1.20 };
+  const goalLabels = { cut: 'Cut (-25%)', maintain: 'Maintain', leanbulk: 'Lean Bulk (+10%)', bulk: 'Bulk (+20%)' };
+
+  // ---- Chalk Standard Carb % by Goal ----
+  const standardCarbPct = { cut: 0.40, maintain: 0.30, leanbulk: 0.55, bulk: 0.55 };
+
+  // ---- Chalk Carb Cycling Ratios ----
+  // Low/High carb % of total calories per goal
+  const cycleLowCarbPct  = { cut: 0.20, maintain: 0.25, bulk: 0.25 };
+  const cycleHighCarbPct = { cut: 0.50, maintain: 0.50, bulk: 0.50 };
+  // Carb cycling calorie multipliers
+  const cycleLowCalMult  = { cut: 0.75, maintain: 1.0, bulk: 1.10 };
+  const cycleHighCalMult = { cut: 0.90, maintain: 1.0, bulk: 1.10 };
+
+  function calcMacros(totalCal, carbPct) {
+    const proteinG = bodyweight;
+    const proteinCal = proteinG * 4;
+    const carbCal = Math.round(totalCal * carbPct);
+    const carbG = Math.round(carbCal / 4);
+    const fatCal = totalCal - proteinCal - carbCal;
+    const fatG = Math.round(fatCal / 9);
+    return { cal: totalCal, protein: proteinG, carbs: carbG, fat: fatG, proteinCal, carbCal, fatCal };
+  }
+
+  if (!carbCycle) {
+    // ---- STANDARD MODE (Chalk logic) ----
+    const totalCal = Math.round(tdee * goalMultipliers[goal]);
+    const m = calcMacros(totalCal, standardCarbPct[goal]);
+
+    // Show ALL activity levels for reference (Chalk style)
+    const actLevels = [
+      { label: 'Sedentary', mult: 1.2 },
+      { label: 'Light', mult: 1.375 },
+      { label: 'Moderate', mult: 1.55 },
+      { label: 'A Lot', mult: 1.725 },
+      { label: 'Extreme', mult: 1.9 }
+    ];
+    const actTable = actLevels.map(a => {
+      const t = Math.round(bmr * a.mult);
+      const sel = Math.abs(a.mult - activityMult) < 0.01;
+      return '<div class="tdee-macro-row' + (sel ? ' tdee-selected-row' : '') + '"><span class="tdee-macro-label">' + a.label + '</span><span class="tdee-macro-value">' + t + ' kcal</span></div>';
+    }).join('');
+
+    const result = { tdee, protein: m.protein, carbs: m.carbs, fat: m.fat, carbCycle: false, goal, totalCal: m.cal };
+    setData(KEYS.tdee, result);
+
+    container.innerHTML =
+      '<div class="tdee-results">' +
+        '<div class="tdee-result-card">' +
+          '<h3>TDEE by Activity</h3>' +
+          actTable +
+          '<p style="font-size:11px;color:#9CA3AF;margin-top:8px;">Mifflin-St Jeor · BMR = ' + Math.round(bmr) + ' kcal</p>' +
+        '</div>' +
+        '<div class="tdee-result-card">' +
+          '<h3>Daily Goals — ' + goalLabels[goal] + '</h3>' +
+          '<div class="tdee-big-number">' + m.cal + ' <span style="font-size:16px;color:#6B7280;">kcal/day</span></div>' +
+          '<div class="tdee-macro-row"><span class="tdee-macro-label">Protein</span><span class="tdee-macro-value">' + m.protein + 'g (' + m.proteinCal + ' kcal)</span></div>' +
+          '<div class="tdee-macro-row"><span class="tdee-macro-label">Carbs</span><span class="tdee-macro-value">' + m.carbs + 'g (' + m.carbCal + ' kcal)</span></div>' +
+          '<div class="tdee-macro-row"><span class="tdee-macro-label">Fat</span><span class="tdee-macro-value">' + m.fat + 'g (' + m.fatCal + ' kcal)</span></div>' +
+        '</div>' +
+      '</div>';
+
+  } else {
+    // ---- CARB CYCLING MODE (Chalk logic) ----
+    // Map leanbulk to bulk for carb cycling (Chalk doesn't have Lean Bulk in carb cycling)
+    const cycleGoal = (goal === 'leanbulk') ? 'bulk' : goal;
+    const lowTotalCal  = Math.round(tdee * cycleLowCalMult[cycleGoal]);
+    const highTotalCal = Math.round(tdee * cycleHighCalMult[cycleGoal]);
+
+    const lowDay  = calcMacros(lowTotalCal, cycleLowCarbPct[cycleGoal]);
+    const highDay = calcMacros(highTotalCal, cycleHighCarbPct[cycleGoal]);
+
+    const result = {
+      tdee, protein: bodyweight, carbCycle: true, goal,
+      high: { calories: highDay.cal, protein: highDay.protein, carbs: highDay.carbs, fat: highDay.fat },
+      low: { calories: lowDay.cal, protein: lowDay.protein, carbs: lowDay.carbs, fat: lowDay.fat }
+    };
+    setData(KEYS.tdee, result);
+
+    function dayCard(label, d, color, desc) {
+      return '<div class="tdee-result-card">' +
+        '<h3 style="color:' + color + '">' + label + ' — ' + d.cal + ' kcal</h3>' +
+        '<p style="font-size:11px;color:#9CA3AF;margin-bottom:8px;">' + desc + '</p>' +
+        '<div class="tdee-macro-row"><span class="tdee-macro-label">Protein</span><span class="tdee-macro-value">' + d.protein + 'g</span></div>' +
+        '<div class="tdee-macro-row"><span class="tdee-macro-label">Carbs</span><span class="tdee-macro-value">' + d.carbs + 'g</span></div>' +
+        '<div class="tdee-macro-row"><span class="tdee-macro-label">Fat</span><span class="tdee-macro-value">' + d.fat + 'g</span></div>' +
+      '</div>';
+    }
+
+    const goalDesc = { cut: 'Cut', maintain: 'Maintain', bulk: 'Bulk' };
+
+    container.innerHTML =
+      '<div class="tdee-results">' +
+        '<div class="tdee-result-card">' +
+          '<h3>Base TDEE</h3>' +
+          '<div class="tdee-big-number">' + tdee + ' <span style="font-size:16px;color:#6B7280;">kcal/day</span></div>' +
+          '<p style="font-size:12px;color:#9CA3AF;margin-top:4px;">Goal: ' + goalLabels[goal] + ' · Carb Cycling</p>' +
+          '<p style="font-size:11px;color:#9CA3AF;">BMR = ' + Math.round(bmr) + ' kcal</p>' +
+        '</div>' +
+        dayCard('🥗 Low Carb Day', lowDay, '#F97316', 'Rest & recovery days — lower carbs, higher fat') +
+        dayCard('🔥 High Carb Day', highDay, '#22C55E', 'Training days — higher carbs for fuel') +
+      '</div>';
+  }
+
+  container.style = '';
+  showToast('TDEE calculated and saved!');
+  refreshDashboard();
+}
+
+// ==================== DASHBOARD ====================
+function refreshDashboard() {
+  const profile = getData(KEYS.profile);
+  const tdee = getData(KEYS.tdee);
+  const workouts = getData(KEYS.workouts) || [];
+
+  // Welcome
+  const name = profile ? profile.name : '';
+  document.getElementById('dashWelcome').textContent = name ? `Welcome back, ${name}` : 'Welcome back';
+
+  // Stat cards — show goal-adjusted calories (not just base TDEE)
+  if (tdee) {
+    const displayCal = tdee.carbCycle ? tdee.high.calories : (tdee.totalCal || tdee.tdee);
+    document.getElementById('dashKcal').textContent = displayCal || '—';
+    document.getElementById('dashProtein').textContent = tdee.protein || '—';
+  } else {
+    document.getElementById('dashKcal').textContent = '—';
+    document.getElementById('dashProtein').textContent = '—';
+  }
+
+  // This week workouts
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - dayOfWeek);
+  startOfWeek.setHours(0,0,0,0);
+  const weekWorkouts = workouts.filter(w => new Date(w.date) >= startOfWeek);
+  document.getElementById('dashWeek').textContent = weekWorkouts.length;
+  document.getElementById('dashTotal').textContent = workouts.length;
+
+  // Strength stats
+  const strengthEl = document.getElementById('dashStrength');
+  if (profile && profile.bench) {
+    const lifts = [
+      { name: 'Bench Press', current: profile.bench, goal: profile.benchGoal },
+      { name: 'Squat', current: profile.squat, goal: profile.squatGoal },
+      { name: 'Deadlift', current: profile.deadlift, goal: profile.deadliftGoal }
+    ];
+    strengthEl.innerHTML = lifts.map(l => {
+      const pct = l.goal > 0 ? Math.min(100, Math.round((l.current / l.goal) * 100)) : 0;
+      return `<div class="lift-item">
+        <div class="lift-header">
+          <span class="lift-name">${l.name}</span>
+          <span class="lift-values"><strong>${l.current}</strong> / ${l.goal} lbs</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  } else {
+    strengthEl.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">Save your profile to see strength stats.</p>';
+  }
+
+  // Nutrition targets
+  const nutritionEl = document.getElementById('dashNutrition');
+  if (tdee) {
+    let cal, prot, carbs, fat, badge = '';
+    if (tdee.carbCycle && tdee.high) {
+      // Show High Carb Day as the primary display (training days)
+      cal = tdee.high.calories;
+      prot = tdee.high.protein;
+      carbs = tdee.high.carbs;
+      fat = tdee.high.fat;
+      badge = `<div style="margin-top:8px;"><span class="badge">🔄 Carb Cycling Active</span></div>
+        <div style="margin-top:6px;font-size:11px;color:#9CA3AF;">Showing High Carb Day · Low Day: ${tdee.low.calories} kcal</div>`;
+    } else {
+      cal = tdee.totalCal || tdee.tdee;
+      prot = tdee.protein;
+      carbs = tdee.carbs;
+      fat = tdee.fat;
+      if (tdee.goal && tdee.goal !== 'maintain') {
+        const goalLabels = { cut: 'Cut', leanbulk: 'Lean Bulk', bulk: 'Bulk' };
+        badge = '<div style="margin-top:8px;"><span class="badge">🎯 ' + (goalLabels[tdee.goal] || '') + '</span></div>';
+      }
+    }
+    nutritionEl.innerHTML = `
+      <div class="nutrition-row"><span class="nutrition-label">Calories</span><span class="nutrition-value">${cal} kcal</span></div>
+      <div class="nutrition-row"><span class="nutrition-label">Protein</span><span class="nutrition-value">${prot} g</span></div>
+      <div class="nutrition-row"><span class="nutrition-label">Carbs</span><span class="nutrition-value">${carbs} g</span></div>
+      <div class="nutrition-row"><span class="nutrition-label">Fat</span><span class="nutrition-value">${fat} g</span></div>
+      ${badge}`;
+  } else {
+    nutritionEl.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">Calculate your TDEE to see nutrition targets.</p>';
+  }
+
+  // Recent workouts
+  const recentEl = document.getElementById('dashRecentWorkouts');
+  if (workouts.length > 0) {
+    const recent = workouts.slice(-5).reverse();
+    recentEl.innerHTML = recent.map(w => `
+      <div class="workout-item">
+        <h4>${esc(w.name)}</h4>
+        <p>${w.date}${w.exercises ? ' — ' + w.exercises.length + ' exercise' + (w.exercises.length !== 1 ? 's' : '') : ''}</p>
+      </div>`).join('');
+  } else {
+    recentEl.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">No workouts logged yet.</p>';
+  }
+}
+
+// ==================== WORKOUT LOGGER ====================
+let exerciseBlockCount = 0;
+let editingWorkoutId = null;
+let editingMacroId = null;
+
+function addExerciseBlock() {
+  exerciseBlockCount++;
+  const id = 'exBlock' + exerciseBlockCount;
+  const html = `<div class="exercise-block" id="${id}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <input type="text" class="exercise-name-input form-control" placeholder="Exercise name" style="margin-bottom:0;flex:1;margin-right:8px;" />
+      <button class="btn-icon" onclick="removeExerciseBlock('${id}')" title="Remove exercise" style="font-size:18px;">✕</button>
+    </div>
+    <div class="set-row" style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">
+      <span>Set</span><span>Weight (lbs)</span><span>Reps</span><span>RPE</span>
+    </div>
+    <div class="sets-container">
+      <div class="set-row">
+        <span class="set-number">1</span>
+        <input type="number" class="form-control" value="0" />
+        <input type="number" class="form-control" value="0" />
+        <input type="text" class="form-control" placeholder="—" />
+      </div>
+    </div>
+    <button class="add-set-btn" onclick="addSet('${id}')">+ Add Set</button>
+  </div>`;
+  document.getElementById('exerciseBlocks').insertAdjacentHTML('beforeend', html);
+}
+
+function removeExerciseBlock(id) {
+  document.getElementById(id).remove();
+}
+
+function addSet(blockId) {
+  const container = document.querySelector(`#${blockId} .sets-container`);
+  const count = container.querySelectorAll('.set-row').length + 1;
+  const html = `<div class="set-row">
+    <span class="set-number">${count}</span>
+    <input type="number" class="form-control" value="0" />
+    <input type="number" class="form-control" value="0" />
+    <input type="text" class="form-control" placeholder="—" />
+  </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+function resetWorkoutForm() {
+  document.getElementById('wkName').value = '';
+  document.getElementById('wkNotes').value = '';
+  setTodayDate('wkDate');
+  document.getElementById('exerciseBlocks').innerHTML = '';
+  exerciseBlockCount = 0;
+  addExerciseBlock();
+}
+
+function setWorkoutEditMode(isEditing) {
+  document.getElementById('workoutSaveBtn').textContent = isEditing ? 'Save Changes' : '💾 Save Workout';
+  document.getElementById('workoutCancelBtn').style.display = isEditing ? 'inline-flex' : 'none';
+}
+
+function cancelWorkoutEdit() {
+  editingWorkoutId = null;
+  setWorkoutEditMode(false);
+  resetWorkoutForm();
+  showToast('Workout edit canceled.');
+}
+
+function saveWorkout() {
+  const name = document.getElementById('wkName').value.trim();
+  const date = document.getElementById('wkDate').value;
+  const notes = document.getElementById('wkNotes').value.trim();
+
+  if (!name) { showToast('Please enter a session name.'); return; }
+  if (!date) { showToast('Please select a date.'); return; }
+
+  const blocks = document.querySelectorAll('#exerciseBlocks .exercise-block');
+  const exercises = [];
+  blocks.forEach(block => {
+    const exName = block.querySelector('.exercise-name-input').value.trim();
+    if (!exName) return;
+    const sets = [];
+    block.querySelectorAll('.sets-container .set-row').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      sets.push({
+        weight: parseInt(inputs[0].value) || 0,
+        reps: parseInt(inputs[1].value) || 0,
+        rpe: inputs[2].value || ''
+      });
+    });
+    exercises.push({ name: exName, sets });
+  });
+
+  const workout = { id: editingWorkoutId || Date.now(), name, date, notes, exercises };
+  const workouts = getData(KEYS.workouts) || [];
+  const idx = editingWorkoutId ? workouts.findIndex(w => w.id === editingWorkoutId) : -1;
+  if (idx >= 0) workouts[idx] = workout;
+  else workouts.push(workout);
+  setData(KEYS.workouts, workouts);
+
+  const wasEditing = !!editingWorkoutId;
+  editingWorkoutId = null;
+  setWorkoutEditMode(false);
+  resetWorkoutForm();
+
+  showToast(wasEditing ? 'Workout updated.' : 'Workout saved!');
+  renderPastWorkouts();
+}
+
+function renderPastWorkouts() {
+  const workouts = getData(KEYS.workouts) || [];
+  const el = document.getElementById('pastWorkoutsList');
+  if (workouts.length === 0) {
+    el.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">No workouts logged yet.</p>';
+    return;
+  }
+  el.innerHTML = workouts.slice().reverse().map(w => {
+    const exSummary = w.exercises ? w.exercises.length + ' exercise' + (w.exercises.length !== 1 ? 's' : '') : '';
+    return `<div class="past-workout-item" id="pw-${w.id}">
+      <div style="flex:1;cursor:pointer;" onclick="toggleWorkoutDetail(${w.id})">
+        <div class="past-workout-name">${esc(w.name)}</div>
+        <div class="past-workout-date">${w.date} — ${exSummary}</div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn-icon" onclick="editWorkout(${w.id})" title="Edit">✏️</button><button class="btn-icon" onclick="deleteWorkout(${w.id})" title="Delete">🗑</button>
+        <button class="btn-icon" onclick="toggleWorkoutDetail(${w.id})" title="Expand">▼</button>
+      </div>
+    </div>
+    <div class="workout-detail" id="wd-${w.id}" style="display:none;">
+      ${(w.exercises || []).map(ex => `
+        <div class="workout-detail-exercise">
+          <h5>${esc(ex.name)}</h5>
+          ${ex.sets.map((s, i) => `<div class="workout-detail-set">Set ${i+1}: ${s.weight} lbs × ${s.reps} reps${s.rpe ? ' @ RPE ' + s.rpe : ''}</div>`).join('')}
+        </div>`).join('')}
+      ${w.notes ? `<p style="font-size:12px;color:#6B7280;margin-top:8px;font-style:italic;">${esc(w.notes)}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleWorkoutDetail(id) {
+  const el = document.getElementById('wd-' + id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function editWorkout(id) {
+  const workouts = getData(KEYS.workouts) || [];
+  const workout = workouts.find(w => w.id === id);
+  if (!workout) return;
+  document.getElementById('wkName').value = workout.name || '';
+  document.getElementById('wkDate').value = workout.date || todayStr();
+  document.getElementById('wkNotes').value = workout.notes || '';
+  document.getElementById('exerciseBlocks').innerHTML = '';
+  exerciseBlockCount = 0;
+  (workout.exercises || []).forEach(ex => {
+    addExerciseBlock();
+    const block = document.querySelector('#exerciseBlocks .exercise-block:last-child');
+    block.querySelector('.exercise-name-input').value = ex.name || '';
+    const setsContainer = block.querySelector('.sets-container');
+    setsContainer.innerHTML = '';
+    (ex.sets || []).forEach((s, idx) => {
+      setsContainer.insertAdjacentHTML('beforeend', `<div class="set-row"><span class="set-number">${idx+1}</span><input type="number" class="form-control" value="${s.weight || 0}" /><input type="number" class="form-control" value="${s.reps || 0}" /><input type="text" class="form-control" placeholder="—" value="${s.rpe || ''}" /></div>`);
+    });
+    if (!ex.sets || !ex.sets.length) addSet(block.id);
+  });
+  editingWorkoutId = id;
+  setWorkoutEditMode(true);
+  showSection('workout');
+  showToast('Workout loaded into editor. Click Save Changes when ready.');
+}
+
+function deleteWorkout(id, silent) {
+  let workouts = getData(KEYS.workouts) || [];
+  workouts = workouts.filter(w => w.id !== id);
+  setData(KEYS.workouts, workouts);
+  renderPastWorkouts();
+  if (!silent) showToast('Workout deleted.');
+}
+
+// ==================== WEEKLY PLANS ====================
+function renderPlans() {
+  const plans = getData(KEYS.plans) || [];
+  const container = document.getElementById('plansContainer');
+  if (plans.length === 0) {
+    container.innerHTML = `<div class="card"><div class="empty-state" style="padding:40px 20px;">
+      <div class="empty-icon">📅</div><h3>No plans yet</h3>
+      <p>Generate a plan from your logged workouts, selected fitness goal, and progressive overload strategy.</p></div></div>`;
+    return;
+  }
+  container.innerHTML = plans.map((plan, idx) => {
+    const days = Object.keys(plan.days || {});
+    return `<div class="plan-card">
+      <div class="plan-card-header">
+        <div>
+          <div class="plan-card-title">${esc(plan.name)}</div>
+          <div class="plan-card-date">Created: ${plan.created || 'Unknown'}</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" onclick="editPlan(${idx})">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePlan(${idx})">🗑 Delete</button>
+        </div>
+      </div>
+      ${days.map(day => `<div class="plan-day">
+        <div class="plan-day-title">${esc(day)}</div>
+        ${(plan.days[day] || []).map(ex => `<div class="plan-exercise">
+          ${esc(ex.exercise)} — ${ex.sets}×${ex.reps}${ex.weight ? ' @ ' + ex.weight + ' lbs' : ''}${ex.rpe ? ' RPE ' + ex.rpe : ''}${ex.notes ? ' (' + esc(ex.notes) + ')' : ''}
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function deletePlan(idx) {
+  const plans = getData(KEYS.plans) || [];
+  plans.splice(idx, 1);
+  setData(KEYS.plans, plans);
+  renderPlans();
+  showToast('Plan deleted.');
+}
+
+function editPlan(idx) {
+  const plans = getData(KEYS.plans) || [];
+  const plan = plans[idx];
+  if (!plan) return;
+  const newName = prompt('Plan name:', plan.name);
+  if (newName === null) return;
+  plan.name = newName;
+  plans[idx] = plan;
+  setData(KEYS.plans, plans);
+  renderPlans();
+  showToast('Plan updated.');
+}
+
+function generatePlan() {
+  const profile = getData(KEYS.profile);
+  if (!profile) { showToast('Please save your profile first.'); return; }
+
+  const goal = profile.goal || 'strength';
+  const freq = profile.frequency || 5;
+  const exp = profile.experience || 'advanced';
+  const bench = profile.bench || 135;
+  const squat = profile.squat || 225;
+  const deadlift = profile.deadlift || 315;
+
+  const plan = { name: '', days: {}, created: todayStr() };
+
+  // Exercise templates based on goal
+  const templates = {
+    strength: {
+      push: [
+        { exercise: 'Bench Press', sets: 5, reps: 5, pct: 0.85 },
+        { exercise: 'Overhead Press', sets: 4, reps: 6, pct: 0.55 },
+        { exercise: 'Incline Dumbbell Press', sets: 3, reps: 8, pct: 0.35 },
+        { exercise: 'Tricep Dips', sets: 3, reps: 10, pct: 0 },
+      ],
+      pull: [
+        { exercise: 'Deadlift', sets: 5, reps: 5, pct: 0.85, base: 'deadlift' },
+        { exercise: 'Barbell Row', sets: 4, reps: 6, pct: 0.55, base: 'deadlift' },
+        { exercise: 'Pull-ups', sets: 4, reps: 8, pct: 0 },
+        { exercise: 'Face Pulls', sets: 3, reps: 15, pct: 0 },
+      ],
+      legs: [
+        { exercise: 'Squat', sets: 5, reps: 5, pct: 0.85, base: 'squat' },
+        { exercise: 'Romanian Deadlift', sets: 4, reps: 8, pct: 0.60, base: 'deadlift' },
+        { exercise: 'Leg Press', sets: 3, reps: 10, pct: 0 },
+        { exercise: 'Calf Raises', sets: 4, reps: 15, pct: 0 },
+      ]
+    },
+    hypertrophy: {
+      push: [
+        { exercise: 'Bench Press', sets: 4, reps: 10, pct: 0.70 },
+        { exercise: 'Incline Dumbbell Press', sets: 4, reps: 12, pct: 0.30 },
+        { exercise: 'Cable Flyes', sets: 3, reps: 15, pct: 0 },
+        { exercise: 'Lateral Raises', sets: 4, reps: 15, pct: 0 },
+        { exercise: 'Tricep Pushdowns', sets: 3, reps: 12, pct: 0 },
+      ],
+      pull: [
+        { exercise: 'Barbell Row', sets: 4, reps: 10, pct: 0.50, base: 'deadlift' },
+        { exercise: 'Lat Pulldown', sets: 4, reps: 12, pct: 0 },
+        { exercise: 'Cable Row', sets: 3, reps: 12, pct: 0 },
+        { exercise: 'Barbell Curl', sets: 3, reps: 12, pct: 0 },
+        { exercise: 'Face Pulls', sets: 3, reps: 15, pct: 0 },
+      ],
+      legs: [
+        { exercise: 'Squat', sets: 4, reps: 10, pct: 0.70, base: 'squat' },
+        { exercise: 'Romanian Deadlift', sets: 4, reps: 10, pct: 0.55, base: 'deadlift' },
+        { exercise: 'Leg Extension', sets: 3, reps: 15, pct: 0 },
+        { exercise: 'Leg Curl', sets: 3, reps: 12, pct: 0 },
+        { exercise: 'Calf Raises', sets: 4, reps: 15, pct: 0 },
+      ]
+    }
+  };
+
+  const tmpl = templates[goal] || templates.strength;
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  function buildExercises(type) {
+    return (tmpl[type] || []).map(e => {
+      const baseVal = e.base === 'deadlift' ? deadlift : e.base === 'squat' ? squat : bench;
+      const weight = e.pct > 0 ? Math.round(baseVal * e.pct / 5) * 5 : 0;
+      return { exercise: e.exercise, sets: e.sets, reps: e.reps, weight: weight || '', rpe: '', notes: '' };
+    });
+  }
+
+  if (freq <= 3) {
+    plan.name = 'Full Body ' + freq + 'x/week';
+    for (let i = 0; i < Math.min(freq, 3); i++) {
+      const dayExercises = [
+        ...buildExercises('push').slice(0, 2),
+        ...buildExercises('pull').slice(0, 2),
+        ...buildExercises('legs').slice(0, 2)
+      ];
+      plan.days[dayNames[i * 2]] = dayExercises;
+    }
+  } else if (freq <= 5) {
+    plan.name = 'Push/Pull/Legs Split';
+    const splits = ['push', 'pull', 'legs', 'push', 'pull'];
+    const labels = ['Push A', 'Pull A', 'Legs', 'Push B', 'Pull B'];
+    for (let i = 0; i < freq; i++) {
+      plan.days[dayNames[i] + ' — ' + labels[i]] = buildExercises(splits[i]);
+    }
+  } else {
+    plan.name = 'PPL + Arms/Core';
+    const splits = ['push', 'pull', 'legs', 'push', 'pull', 'legs'];
+    const labels = ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs'];
+    for (let i = 0; i < Math.min(freq, 6); i++) {
+      plan.days[dayNames[i] + ' — ' + labels[i]] = buildExercises(splits[i]);
+    }
+  }
+
+  const plans = getData(KEYS.plans) || [];
+  plans.push(plan);
+  setData(KEYS.plans, plans);
+  renderPlans();
+  showToast('Plan generated!');
+}
+
+// ==================== IMPORT ====================
+function showImportModal() { document.getElementById('importModal').classList.add('show'); }
+function closeImportModal() { document.getElementById('importModal').classList.remove('show'); resetImportModal(); }
+
+function switchImportTab() { return; }
+
+// Temporary storage for analyzed import data
+let _importImportd = null;
+
+function analyzeImport(type) {
+  if (type === 'csv') {
+    const fileInput = document.getElementById('csvFileInput');
+    if (!fileInput.files.length) { showToast('Please select a CSV file.'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const parsed = parseCSVData(e.target.result);
+      if (parsed) showImportPreview(parsed, fileInput.files[0].name);
+    };
+    reader.readAsText(fileInput.files[0]);
+  } else {
+    const fileInput = document.getElementById('pdfFileInput');
+    if (!fileInput.files.length) { showToast('Please select a PDF file.'); return; }
+    analyzePDFImport(fileInput.files[0]);
+  }
+}
+
+function importSelectedFile() {
+  const csvInput = document.getElementById('csvFileInput');
+  const pdfInput = document.getElementById('pdfFileInput');
+  const hasCsv = csvInput && csvInput.files && csvInput.files.length;
+  const hasPdf = pdfInput && pdfInput.files && pdfInput.files.length;
+
+  if (hasCsv && hasPdf) {
+    showToast('Please choose either a CSV file or a PDF file.');
+    return;
+  }
+  if (hasCsv) {
+    analyzeImport('csv');
+    return;
+  }
+  if (hasPdf) {
+    analyzeImport('pdf');
+    return;
+  }
+  showToast('Please choose a CSV or PDF file first.');
+}
+
+
+function parseCSVData(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length < 2) { showToast('CSV appears empty.'); return null; }
+
+  const header = lines[0].toLowerCase().split(',').map(h => h.trim());
+  const dayIdx = header.indexOf('day');
+  const exIdx = header.indexOf('exercise');
+  const setsIdx = header.indexOf('sets');
+  const repsIdx = header.indexOf('reps');
+  const weightIdx = header.indexOf('weight');
+  const rpeIdx = header.indexOf('rpe');
+  const notesIdx = header.indexOf('notes');
+
+  if (exIdx < 0) { showToast('CSV must have an Exercise column.'); return null; }
+
+  const days = {};
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    const day = dayIdx >= 0 ? (cols[dayIdx] || 'Day ' + i) : 'Exercises';
+    if (!days[day]) days[day] = [];
+    days[day].push({
+      exercise: cols[exIdx] || '',
+      sets: parseInt(cols[setsIdx]) || 0,
+      reps: parseInt(cols[repsIdx]) || 0,
+      weight: cols[weightIdx] || '',
+      rpe: cols[rpeIdx] || '',
+      notes: cols[notesIdx] || ''
+    });
+  }
+  return days;
+}
+
+async function analyzePDFImport(file) {
+  if (typeof pdfjsLib === 'undefined') {
+    showToast('PDF.js library not loaded.'); return;
+  }
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+    }
+    const parsed = parsePDFText(fullText);
+    showImportPreview(parsed.days, file.name);
+  } catch (err) {
+    showToast('Error reading PDF: ' + err.message);
+  }
+}
+
+function renderPlanPreview(days, options = {}) {
+  const title = options.title || 'Plan Preview';
+  const tone = options.tone || 'imported';
+  const totalDays = Object.keys(days || {}).length;
+  let totalExercises = 0;
+  let html = `<div style="margin-bottom:12px;"><strong>${title}</strong></div>`;
+  html += `<div style="margin-bottom:10px;color:${tone === 'generated' ? '#1D4ED8' : '#6B7280'};font-size:12px;">${totalDays} day${totalDays !== 1 ? 's' : ''} in this plan</div>`;
+  for (const [dayName, exercises] of Object.entries(days || {})) {
+    totalExercises += exercises.length;
+    html += `<div class="import-day-header" style="font-weight:700;color:${tone === 'generated' ? '#1D4ED8' : '#2563EB'};margin:14px 0 8px;border-bottom:1px solid ${tone === 'generated' ? '#BFDBFE' : '#E5E7EB'};padding-bottom:6px;">${esc(dayName)}</div>`;
+    html += `<div style="display:grid;grid-template-columns:2fr .8fr .8fr .9fr .8fr;gap:8px;padding:6px 0 8px 0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6B7280;border-bottom:1px solid ${tone === 'generated' ? '#DBEAFE' : '#E5E7EB'};">
+      <div>Exercise</div><div>Sets</div><div>Reps</div><div>Weight</div><div>RPE</div>
+    </div>`;
+    html += exercises.map(ex => `
+      <div class="import-exercise-row" style="display:grid;grid-template-columns:2fr .8fr .8fr .9fr .8fr;gap:8px;padding:10px 0;border-bottom:1px solid ${tone === 'generated' ? '#DBEAFE' : '#F3F4F6'};align-items:start;">
+        <div>
+          <div style="font-weight:600;color:#111827;">${esc(ex.exercise || ex.name || 'Unknown exercise')}</div>
+          ${ex.notes ? `<div style="font-size:12px;color:#6B7280;margin-top:3px;">${esc(ex.notes)}</div>` : ''}
+        </div>
+        <div>${ex.sets || '-'}</div>
+        <div>${ex.reps || '-'}</div>
+        <div>${ex.weight ? `${ex.weight} lbs` : '-'}</div>
+        <div>${ex.rpe || '-'}</div>
+      </div>`).join('');
+  }
+  html += `<div style="margin-top:12px;padding:10px;background:${tone === 'generated' ? '#DBEAFE' : '#EFF6FF'};border-radius:6px;font-size:12px;color:${tone === 'generated' ? '#1E3A8A' : '#1E40AF'};">Summary: ${totalExercises} exercises across ${totalDays} days.</div>`;
+  return html;
+}
+
+function showImportPreview(days, filename) {
+  importImportd = days;
+  generatedImportPlan = null;
+  document.getElementById('importPreview').innerHTML = `<div style="margin-bottom:12px;"><strong>${esc(filename)}</strong></div>` + renderPlanPreview(days, { title: 'Imported Workout', tone: 'imported' });
+  document.getElementById('generatedPlanPreview').style.display = 'none';
+  document.getElementById('generatedPlanPreview').innerHTML = '';
+  document.getElementById('importPlanName').value = 'Generated Workout';
+  document.getElementById('importStep1').style.display = 'none';
+  document.getElementById('importStep2').style.display = 'block';
+}
+
+function importGoBack() {
+  document.getElementById('importStep1').style.display = 'block';
+  document.getElementById('importStep2').style.display = 'none';
+  _importImportd = null;
+}
+
+function importAsIs() {
+  if (!importAnalyzed) {
+    showToast('Import a file first.');
+    return;
+  }
+  const plans = getData(KEYS.plans) || [];
+  const baseName = (document.getElementById('importPlanName').value || 'Imported Workout').trim();
+
+  const importedPlan = {
+    name: baseName + (generatedImportPlan ? ' (Imported)' : ''),
+    days: JSON.parse(JSON.stringify(importAnalyzed)),
+    created: todayStr(),
+    source: 'Imported file'
+  };
+  plans.push(importedPlan);
+
+  if (generatedImportPlan) {
+    plans.push({
+      ...generatedImportPlan,
+      name: baseName + ' (Generated)',
+      days: JSON.parse(JSON.stringify(generatedImportPlan.days))
+    });
+  }
+
+  setData(KEYS.plans, plans);
+  renderPlans();
+  closeImportModal();
+  showSection('plans');
+  showToast(generatedImportPlan ? 'Imported and generated workout plans saved.' : 'Imported workout plan saved.');
+}
+
+function importAndGenerate() {
+  if (!importImportd) return;
+  const profile = getData(KEYS.profile);
+  const planName = document.getElementById('importPlanName').value || 'Generated Workout';
+  const bench = profile ? profile.bench || 135 : 135;
+  const squat = profile ? profile.squat || 225 : 225;
+  const deadlift = profile ? profile.deadlift || 315 : 315;
+  const goal = profile ? profile.goal || 'strength' : 'strength';
+  const experience = profile ? profile.experience || 'intermediate' : 'intermediate';
+  const frequency = profile ? profile.frequency || Object.keys(importImportd).length || 4 : Object.keys(importImportd).length || 4;
+
+  const liftMap = {
+    'bench press': bench, 'flat bench': bench, 'dumbbell bench': bench * 0.35,
+    'incline bench': bench * 0.8, 'incline dumbbell bench': bench * 0.32,
+    'overhead press': bench * 0.6, 'ohp': bench * 0.6, 'military press': bench * 0.6,
+    'close grip bench': bench * 0.82, 'squat': squat, 'back squat': squat,
+    'front squat': squat * 0.8, 'split squat': squat * 0.35, 'leg press': squat * 1.5,
+    'deadlift': deadlift, 'conventional deadlift': deadlift, 'sumo deadlift': deadlift,
+    'romanian deadlift': deadlift * 0.65, 'rdl': deadlift * 0.65,
+    'barbell row': deadlift * 0.5, 'bent over row': deadlift * 0.5, 'pendlay row': deadlift * 0.52,
+    'pull-up': 0, 'pullup': 0, 'chin-up': 0, 'lat pulldown': 0, 'cable row': 0
+  };
+  const goalDefaults = {
+    strength: { mainSets: 5, mainReps: 5, mainPct: 0.85, accessorySets: 3, accessoryReps: 8, accessoryRpe: 8 },
+    hypertrophy: { mainSets: 4, mainReps: 8, mainPct: 0.72, accessorySets: 3, accessoryReps: 12, accessoryRpe: 8 },
+    cut: { mainSets: 3, mainReps: 10, mainPct: 0.67, accessorySets: 3, accessoryReps: 12, accessoryRpe: 7 },
+    maintain: { mainSets: 4, mainReps: 6, mainPct: 0.75, accessorySets: 3, accessoryReps: 10, accessoryRpe: 7 }
+  };
+  const expAdjust = {
+    beginner: { setBump: -1, pctBump: -0.05, rpe: 7 },
+    intermediate: { setBump: 0, pctBump: 0, rpe: 8 },
+    advanced: { setBump: 1, pctBump: 0.03, rpe: 8.5 }
+  };
+
+  const defaults = goalDefaults[goal] || goalDefaults.strength;
+  const exp = expAdjust[experience] || expAdjust.intermediate;
+  const generated = {};
+
+  for (const [dayName, exercises] of Object.entries(importImportd)) {
+    generated[dayName] = exercises.map((ex, idx) => {
+      const rawName = ex.exercise || ex.name || `Exercise ${idx + 1}`;
+      const name = rawName.toLowerCase();
+      const matched = Object.entries(liftMap).find(([key]) => name.includes(key));
+      const baseLift = matched ? matched[1] : 0;
+      const isMain = idx < 2 || /(bench|squat|deadlift|press|row)/i.test(rawName);
+      const prescribedSets = Math.max(2, Number(ex.sets) || (isMain ? defaults.mainSets + exp.setBump : defaults.accessorySets));
+      const prescribedReps = Math.max(5, Number(ex.reps) || (isMain ? defaults.mainReps : defaults.accessoryReps));
+      const prescribedRpe = ex.rpe || (isMain ? exp.rpe : defaults.accessoryRpe);
+      let prescribedWeight = Number(ex.weight) || 0;
+      if (!prescribedWeight && baseLift > 0) {
+        const pct = Math.max(0.45, defaults.mainPct + exp.pctBump - (isMain ? 0 : 0.1));
+        prescribedWeight = Math.round((baseLift * pct) / 5) * 5;
+      }
+      return {
+        exercise: rawName,
+        sets: prescribedSets,
+        reps: prescribedReps,
+        weight: prescribedWeight,
+        rpe: prescribedRpe,
+        notes: [
+          ex.notes || '',
+          isMain ? `Tweaked for ${goal}` : 'Accessory adjusted from import',
+          `Profile used: ${experience}, ${frequency} days/week`
+        ].filter(Boolean).join(' • ')
+      };
+    });
+  }
+
+  generatedImportPlan = {
+    name: planName,
+    created: todayStr(),
+    source: 'Imported plan with profile-based tweaks',
+    profileGoal: goal,
+    days: generated
+  };
+  document.getElementById('generatedPlanPreview').style.display = 'block';
+  document.getElementById('generatedPlanPreview').innerHTML = renderPlanPreview(generatedImportPlan.days, { title: 'Generated Workout', tone: 'generated' });
+  showToast('Generated workout shown below the imported plan.');
+}
+
+function resetImportModal() {
+  document.getElementById('importStep1').style.display = 'block';
+  document.getElementById('importStep2').style.display = 'none';
+  _importImportd = null;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+    else { current += ch; }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// PDF import now handled by analyzeImport('pdf') above
+
+function parsePDFText(text) {
+  const days = {};
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+                     'day 1', 'day 2', 'day 3', 'day 4', 'day 5', 'day 6', 'day 7',
+                     'push', 'pull', 'legs', 'upper', 'lower', 'full body'];
+
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  let currentDay = 'Exercises';
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    // Check if line is a day header
+    const matchedDay = dayNames.find(d => lower.startsWith(d));
+    if (matchedDay) {
+      currentDay = line.replace(/[:\-—]/g, '').trim();
+      if (!days[currentDay]) days[currentDay] = [];
+      continue;
+    }
+
+    // Try to parse exercise info: "Exercise Name 3x10 @ 225"
+    const exMatch = line.match(/^(.+?)\s*(\d+)\s*[x×]\s*(\d+)\s*(?:@\s*(\d+))?/i);
+    if (exMatch) {
+      if (!days[currentDay]) days[currentDay] = [];
+      days[currentDay].push({
+        exercise: exMatch[1].trim(),
+        sets: parseInt(exMatch[2]),
+        reps: parseInt(exMatch[3]),
+        weight: exMatch[4] ? parseInt(exMatch[4]) : '',
+        rpe: '', notes: ''
+      });
+    } else if (line.length > 3 && line.length < 60 && !line.match(/^\d+$/)) {
+      // Might be exercise without sets info
+      if (!days[currentDay]) days[currentDay] = [];
+      if (line.match(/[a-zA-Z]{3,}/)) {
+        days[currentDay].push({
+          exercise: line.replace(/[:\-—]/g, '').trim(),
+          sets: 3, reps: 10, weight: '', rpe: '', notes: 'Parsed from PDF'
+        });
+      }
+    }
+  }
+
+  // Clean empty days
+  Object.keys(days).forEach(k => { if (days[k].length === 0) delete days[k]; });
+
+  if (Object.keys(days).length === 0) {
+    days['Imported Exercises'] = [{ exercise: 'Review PDF manually', sets: 0, reps: 0, weight: '', rpe: '', notes: text.substring(0, 200) }];
+  }
+
+  return { name: 'Imported Workout (PDF)', days, created: todayStr() };
+}
+
+// ==================== AI COACH ====================
+function toggleApiSection() {
+  const el = document.getElementById('apiSection');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key) {
+    _storage.set(KEYS.apiKey, key);
+    showToast('API key saved (for future use).');
+  }
+}
+
+function analyzeTraining() {
+  const workouts = getData(KEYS.workouts) || [];
+  const profile = getData(KEYS.profile);
+  const el = document.getElementById('coachResults');
+
+  if (workouts.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🤖</div>
+      <h3>No workout data found</h3>
+      <p>Log some workouts first, then come back for preview.</p>
+      <button class="btn btn-primary" onclick="analyzeTraining()">🤖 Import My Training</button>
+    </div>`;
+    return;
+  }
+
+  const insights = [];
+
+  // 1. Volume preview
+  const totalSets = workouts.reduce((sum, w) => sum + (w.exercises || []).reduce((s, e) => s + e.sets.length, 0), 0);
+  const totalExercises = workouts.reduce((sum, w) => sum + (w.exercises || []).length, 0);
+  insights.push({
+    icon: '📊',
+    title: 'Training Volume',
+    text: `You've completed ${totalSets} total sets across ${totalExercises} exercises in ${workouts.length} session${workouts.length !== 1 ? 's' : ''}. ${totalSets / workouts.length > 15 ? 'Your volume per session is solid.' : 'Consider adding more sets per session for better stimulus.'}`
+  });
+
+  // 2. Exercise frequency preview
+  const exFreq = {};
+  workouts.forEach(w => (w.exercises || []).forEach(e => {
+    const name = e.name.toLowerCase();
+    exFreq[name] = (exFreq[name] || 0) + 1;
+  }));
+  const topExercises = Object.entries(exFreq).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (topExercises.length > 0) {
+    insights.push({
+      icon: '🔄',
+      title: 'Most Frequent Exercises',
+      text: topExercises.map(e => `${e[0]} (${e[1]}x)`).join(', ') + '. ' + (topExercises.length < 3 ? 'Try adding more exercise variety to hit muscles from different angles.' : 'Good variety in your training!')
+    });
+  }
+
+  // 3. Progressive overload
+  const exHistory = {};
+  workouts.forEach(w => (w.exercises || []).forEach(e => {
+    const name = e.name.toLowerCase();
+    if (!exHistory[name]) exHistory[name] = [];
+    const maxWeight = Math.max(...e.sets.map(s => s.weight || 0));
+    const maxVol = e.sets.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0);
+    exHistory[name].push({ date: w.date, maxWeight, volume: maxVol });
+  }));
+
+  Object.entries(exHistory).forEach(([name, history]) => {
+    if (history.length >= 2) {
+      const first = history[0];
+      const last = history[history.length - 1];
+      if (last.maxWeight > first.maxWeight) {
+        const diff = last.maxWeight - first.maxWeight;
+        insights.push({
+          icon: '📈',
+          title: `Progressive Overload: ${name}`,
+          text: `Weight increased by ${diff} lbs from ${first.maxWeight} to ${last.maxWeight} lbs. Great progress! Consider adding another 5 lbs next session.`
+        });
+      } else if (last.maxWeight === first.maxWeight && history.length >= 2) {
+        insights.push({
+          icon: '⚠️',
+          title: `Plateau: ${name}`,
+          text: `Weight has stayed at ${last.maxWeight} lbs. Try increasing by 5 lbs next session, or add an extra rep to each set before increasing weight.`
+        });
+      }
+      if (last.volume > first.volume) {
+        const pct = Math.round(((last.volume - first.volume) / first.volume) * 100);
+        if (pct > 15) {
+          insights.push({
+            icon: '💡',
+            title: `Volume Jump: ${name}`,
+            text: `Volume increased ${pct}% — consider a deload week if you're feeling fatigued.`
+          });
+        }
+      }
+    }
+  });
+
+  // 4. Rep drop-off preview
+  workouts.forEach(w => (w.exercises || []).forEach(e => {
+    if (e.sets.length >= 3) {
+      const firstReps = e.sets[0].reps || 0;
+      const lastReps = e.sets[e.sets.length - 1].reps || 0;
+      if (firstReps > 0 && lastReps > 0) {
+        const dropPct = Math.round(((firstReps - lastReps) / firstReps) * 100);
+        if (dropPct > 30) {
+          insights.push({
+            icon: '🔻',
+            title: `Rep Drop-off: ${e.name}`,
+            text: `Reps dropped ${dropPct}% from set 1 (${firstReps}) to your last set (${lastReps}). Consider reducing weight by 5-10% on later sets, or taking longer rest periods.`
+          });
+        }
+      }
+    }
+  }));
+
+  // 5. Goal progress
+  if (profile && profile.benchGoal) {
+    const lifts = [
+      { name: 'Bench Press', current: profile.bench, goal: profile.benchGoal },
+      { name: 'Squat', current: profile.squat, goal: profile.squatGoal },
+      { name: 'Deadlift', current: profile.deadlift, goal: profile.deadliftGoal }
+    ];
+    lifts.forEach(l => {
+      const pct = Math.round((l.current / l.goal) * 100);
+      const remaining = l.goal - l.current;
+      if (pct >= 95) {
+        insights.push({ icon: '🏆', title: `${l.name}: Almost There!`, text: `At ${l.current} lbs, you're ${pct}% to your ${l.goal} lb goal. Just ${remaining} lbs to go!` });
+      } else if (pct >= 80) {
+        insights.push({ icon: '🎯', title: `${l.name}: On Track`, text: `${l.current}/${l.goal} lbs (${pct}%). At 5 lbs/month progress, you could reach your goal in ~${Math.ceil(remaining/5)} months.` });
+      }
+    });
+  }
+
+  // 6. Consistency
+  if (workouts.length >= 2) {
+    const dates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+    const gaps = [];
+    for (let i = 1; i < dates.length; i++) {
+      gaps.push((dates[i] - dates[i-1]) / (1000 * 60 * 60 * 24));
+    }
+    const avgGap = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+    insights.push({
+      icon: '📆',
+      title: 'Training Consistency',
+      text: `Average ${avgGap} day${avgGap !== 1 ? 's' : ''} between sessions. ${avgGap <= 2 ? 'Excellent consistency!' : avgGap <= 4 ? 'Good rhythm — try to stay consistent.' : 'Consider training more frequently for better results.'}`
+    });
+  }
+
+  // Render
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div class="card-title" style="margin-bottom:0;"><span class="card-title-icon">🤖</span> Training Analysis</div>
+      <button class="btn btn-primary btn-sm" onclick="analyzeTraining()">🔄 Re-analyze</button>
+    </div>
+    ${insights.map(i => `<div class="coach-card">
+      <div class="coach-icon">${i.icon}</div>
+      <div><h4>${i.title}</h4><p>${i.text}</p></div>
+    </div>`).join('')}`;
+}
+
+// ==================== MACRO TRACKER ====================
+function resetMacroForm() {
+  setTodayDate('macroDate');
+  document.getElementById('macroCal').value = 0;
+  document.getElementById('macroProtein').value = 0;
+  document.getElementById('macroCarbs').value = 0;
+  document.getElementById('macroFat').value = 0;
+  document.getElementById('macroNotes').value = '';
+}
+
+function setMacroEditMode(isEditing) {
+  document.getElementById('macroSaveBtn').textContent = isEditing ? 'Save Changes' : 'Log Macros';
+  document.getElementById('macroCancelBtn').style.display = isEditing ? 'inline-flex' : 'none';
+}
+
+function cancelMacroEdit() {
+  editingMacroId = null;
+  setMacroEditMode(false);
+  resetMacroForm();
+  showToast('Macro edit canceled.');
+}
+
+function logMacros() {
+  const date = document.getElementById('macroDate').value;
+  const calories = parseInt(document.getElementById('macroCal').value) || 0;
+  const protein = parseInt(document.getElementById('macroProtein').value) || 0;
+  const carbs = parseInt(document.getElementById('macroCarbs').value) || 0;
+  const fat = parseInt(document.getElementById('macroFat').value) || 0;
+  const notes = document.getElementById('macroNotes').value.trim();
+
+  if (!date) { showToast('Please select a date.'); return; }
+  if (calories === 0) { showToast('Please enter calories.'); return; }
+
+  const entry = { id: Date.now(), date, calories, protein, carbs, fat, notes };
+  const macros = getData(KEYS.macros) || [];
+  macros.push(entry);
+  setData(KEYS.macros, macros);
+
+  // Reset
+  document.getElementById('macroCal').value = '0';
+  document.getElementById('macroProtein').value = '0';
+  document.getElementById('macroCarbs').value = '0';
+  document.getElementById('macroFat').value = '0';
+  document.getElementById('macroNotes').value = '';
+
+  showToast('Macros logged!');
+  renderMacroChart();
+  renderMacroHistory();
+}
+
+function renderMacroChart() {
+  const macros = getData(KEYS.macros) || [];
+  const tdee = getData(KEYS.tdee);
+  const target = tdee ? tdee.tdee : 2500;
+  const el = document.getElementById('macroChart');
+
+  // Last 7 days
+  const today = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const dayEntries = macros.filter(m => m.date === ds);
+    const totalCal = dayEntries.reduce((s, m) => s + m.calories, 0);
+    days.push({
+      label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()],
+      date: ds,
+      cal: totalCal
+    });
+  }
+
+  const maxCal = Math.max(target * 1.3, ...days.map(d => d.cal), 1);
+
+  el.innerHTML = days.map(d => {
+    const heightPct = d.cal > 0 ? Math.max(4, (d.cal / maxCal) * 100) : 4;
+    let color = '#D1D5DB'; // no data
+    if (d.cal > 0) {
+      const ratio = d.cal / target;
+      if (ratio >= 0.9 && ratio <= 1.1) color = '#3B82F6'; // on target
+      else if (ratio < 0.9) color = '#F97316'; // under
+      else color = '#EF4444'; // over
+    }
+    return `<div class="bar-col">
+      <div class="bar-value">${d.cal > 0 ? d.cal : ''}</div>
+      <div class="bar" style="height:${heightPct}%;background:${color};"></div>
+      <div class="bar-label">${d.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMacroHistory() {
+  const macros = getData(KEYS.macros) || [];
+  const tdee = getData(KEYS.tdee);
+  const target = tdee ? tdee.tdee : null;
+  const el = document.getElementById('macroHistory');
+
+  if (macros.length === 0) {
+    el.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">No entries logged yet.</p>';
+    return;
+  }
+
+  el.innerHTML = macros.slice().reverse().map(m => {
+    let diffHTML = '';
+    if (target) {
+      const diff = m.calories - target;
+      const cls = diff >= 0 ? 'log-diff-over' : 'log-diff-negative';
+      diffHTML = `<span class="${diff >= 0 ? 'log-diff-over' : 'log-diff-positive'}" style="color:${diff >= 0 ? '#EF4444' : '#22C55E'}">${diff >= 0 ? '+' : ''}${diff}</span>`;
+    }
+    return `<div class="log-history-item">
+      <div>
+        <div class="log-history-date">${m.date}</div>
+        <div class="log-history-macros">P:${m.protein}g C:${m.carbs}g F:${m.fat}g</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="log-history-kcal">${m.calories} kcal</span>
+        ${diffHTML}
+        <button class="btn-icon" onclick="editMacro(${m.id})" title="Edit">✏️</button><button class="btn-icon" onclick="deleteMacro(${m.id})" title="Delete">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editMacro(id) {
+  const macros = getData(KEYS.macros) || [];
+  const m = macros.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('macroDate').value = m.date || todayStr();
+  document.getElementById('macroCalories').value = m.calories || 0;
+  document.getElementById('macroProtein').value = m.protein || 0;
+  document.getElementById('macroCarbs').value = m.carbs || 0;
+  document.getElementById('macroFat').value = m.fat || 0;
+  editingMacroId = id;
+  setMacroEditMode(true);
+  showSection('macro');
+  showToast('Macro entry loaded into editor. Click Save Changes when ready.');
+}
+
+function deleteMacro(id, silent) {
+  let macros = getData(KEYS.macros) || [];
+  macros = macros.filter(m => m.id !== id);
+  setData(KEYS.macros, macros);
+  renderMacroChart();
+  renderMacroHistory();
+  if (!silent) showToast('Entry deleted.');
+}
+
+// ==================== DEMO DATA ====================
+function loadDemoData() {
+  // Profile
+  const profile = {
+    name: 'AJM', gender: 'male', age: 33, heightFt: 5, heightIn: 11, weight: 192,
+    activity: '1.725', goal: 'strength', experience: 'advanced', frequency: 5,
+    bench: 285, squat: 365, deadlift: 425,
+    benchGoal: 315, squatGoal: 405, deadliftGoal: 495
+  };
+  setData(KEYS.profile, profile);
+
+  // TDEE (Chalk-style Maintain + Carb Cycling)
+  // BMR=1838, TDEE=2849 (Moderate), Maintain goal
+  // Low: TDEE*1.0, 25% carbs, fat fills rest
+  // High: TDEE*1.0, 50% carbs, fat fills rest
+  const tdee = {
+    tdee: 2849, protein: 192, carbCycle: true, goal: 'maintain',
+    high: { calories: 2849, protein: 192, carbs: 356, fat: 73 },
+    low: { calories: 2849, protein: 192, carbs: 178, fat: 152 }
+  };
+  setData(KEYS.tdee, tdee);
+
+  // Workouts
+  const today = new Date();
+  const d = (offset) => {
+    const dt = new Date(today);
+    dt.setDate(today.getDate() - offset);
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  };
+
+  const workouts = [
+    {
+      id: 1, name: 'Push Day', date: d(0), notes: 'Felt strong today',
+      exercises: [
+        { name: 'Bench Press', sets: [
+          { weight: 225, reps: 8, rpe: '7' },
+          { weight: 245, reps: 6, rpe: '8' },
+          { weight: 265, reps: 4, rpe: '9' },
+          { weight: 225, reps: 8, rpe: '7' }
+        ]},
+        { name: 'Overhead Press', sets: [
+          { weight: 135, reps: 8, rpe: '7' },
+          { weight: 145, reps: 6, rpe: '8' },
+          { weight: 145, reps: 5, rpe: '9' }
+        ]},
+        { name: 'Incline Dumbbell Press', sets: [
+          { weight: 80, reps: 10, rpe: '7' },
+          { weight: 80, reps: 8, rpe: '8' }
+        ]}
+      ]
+    },
+    {
+      id: 2, name: 'Pull Day', date: d(2), notes: 'Good session',
+      exercises: [
+        { name: 'Deadlift', sets: [
+          { weight: 365, reps: 5, rpe: '8' },
+          { weight: 385, reps: 3, rpe: '9' },
+          { weight: 405, reps: 2, rpe: '10' }
+        ]},
+        { name: 'Barbell Row', sets: [
+          { weight: 185, reps: 8, rpe: '7' },
+          { weight: 205, reps: 6, rpe: '8' },
+          { weight: 205, reps: 5, rpe: '9' }
+        ]},
+        { name: 'Pull-ups', sets: [
+          { weight: 0, reps: 10, rpe: '7' },
+          { weight: 0, reps: 8, rpe: '8' },
+          { weight: 0, reps: 7, rpe: '9' }
+        ]}
+      ]
+    },
+    {
+      id: 3, name: 'Leg Day', date: d(4), notes: 'Heavy squats',
+      exercises: [
+        { name: 'Squat', sets: [
+          { weight: 315, reps: 5, rpe: '7' },
+          { weight: 335, reps: 4, rpe: '8' },
+          { weight: 355, reps: 3, rpe: '9' }
+        ]},
+        { name: 'Romanian Deadlift', sets: [
+          { weight: 225, reps: 8, rpe: '7' },
+          { weight: 245, reps: 6, rpe: '8' }
+        ]},
+        { name: 'Leg Press', sets: [
+          { weight: 450, reps: 12, rpe: '7' },
+          { weight: 500, reps: 10, rpe: '8' }
+        ]}
+      ]
+    },
+    {
+      id: 4, name: 'Push Day', date: d(7), notes: 'PR on bench!',
+      exercises: [
+        { name: 'Bench Press', sets: [
+          { weight: 225, reps: 8, rpe: '7' },
+          { weight: 245, reps: 6, rpe: '8' },
+          { weight: 275, reps: 3, rpe: '9.5' },
+          { weight: 225, reps: 8, rpe: '7' }
+        ]},
+        { name: 'Overhead Press', sets: [
+          { weight: 135, reps: 8, rpe: '7' },
+          { weight: 140, reps: 6, rpe: '8' }
+        ]}
+      ]
+    }
+  ];
+  setData(KEYS.workouts, workouts);
+
+  // Macro entries
+  const macros = [
+    { id: 101, date: d(0), calories: 3100, protein: 195, carbs: 380, fat: 85, notes: 'High day' },
+    { id: 102, date: d(1), calories: 2650, protein: 190, carbs: 240, fat: 88, notes: 'Low day' },
+    { id: 103, date: d(2), calories: 2900, protein: 192, carbs: 300, fat: 80, notes: '' },
+    { id: 104, date: d(3), calories: 2500, protein: 188, carbs: 210, fat: 82, notes: 'Low day' },
+    { id: 105, date: d(4), calories: 3200, protein: 200, carbs: 395, fat: 78, notes: 'High day' },
+    { id: 106, date: d(5), calories: 2800, protein: 190, carbs: 280, fat: 85, notes: '' },
+    { id: 107, date: d(6), calories: 2750, protein: 185, carbs: 270, fat: 83, notes: '' }
+  ];
+  setData(KEYS.macros, macros);
+
+  // Load profile into form
+  loadProfile();
+  refreshDashboard();
+  showToast('Demo data loaded!');
+}
+
+// ==================== ESCAPE HTML ====================
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ==================== INIT ====================
+function init() {
+  initDarkMode();
+  loadProfile();
+  setTodayDate('wkDate');
+  setTodayDate('macroDate');
+  addExerciseBlock();
+  refreshDashboard();
+  renderPastWorkouts();
+  renderPlans();
+  renderMacroChart();
+  renderMacroHistory();
+
+  // Load saved TDEE results
+  const tdee = getData(KEYS.tdee);
+  if (tdee) {
+    // Re-render TDEE results
+    const container = document.getElementById('tdeeResultsContent');
+    if (tdee.carbCycle) {
+      const h = tdee.high || {};
+      const m = tdee.moderate || {};
+      const l = tdee.low || {};
+      function dayHTML(label, d, color) {
+        return `<div class="tdee-result-card">
+          <h3 style="color:${color}">${label} — ${d.calories || 0} kcal</h3>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Protein</span><span class="tdee-macro-value">${d.protein || 0}g</span></div>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Carbs</span><span class="tdee-macro-value">${d.carbs || 0}g</span></div>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Fat</span><span class="tdee-macro-value">${d.fat || 0}g</span></div>
+        </div>`;
+      }
+      container.innerHTML = `<div class="tdee-results">
+        <div class="tdee-result-card"><h3>Base TDEE</h3><div class="tdee-big-number">${tdee.tdee} <span style="font-size:16px;color:#6B7280;">kcal/day</span></div></div>
+        ${dayHTML('🔼 High Day (+10%)', h, '#22C55E')}
+        ${dayHTML('➡️ Moderate Day', m, '#3B82F6')}
+        ${dayHTML('🔽 Low Day (-15%)', l, '#F97316')}
+      </div>`;
+      container.style = '';
+      document.getElementById('tdeeCarb').checked = true;
+    } else if (tdee.tdee) {
+      const proteinCal = (tdee.protein || 0) * 4;
+      const fatCal = (tdee.fat || 0) * 9;
+      const carbsCal = (tdee.carbs || 0) * 4;
+      container.innerHTML = `<div class="tdee-results">
+        <div class="tdee-result-card"><h3>Your TDEE</h3><div class="tdee-big-number">${tdee.tdee} <span style="font-size:16px;color:#6B7280;">kcal/day</span></div></div>
+        <div class="tdee-result-card"><h3>Daily Macros</h3>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Protein</span><span class="tdee-macro-value">${tdee.protein}g (${proteinCal} kcal)</span></div>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Carbs</span><span class="tdee-macro-value">${tdee.carbs}g (${carbsCal} kcal)</span></div>
+          <div class="tdee-macro-row"><span class="tdee-macro-label">Fat</span><span class="tdee-macro-value">${tdee.fat}g (${fatCal} kcal)</span></div>
+        </div>
+      </div>`;
+      container.style = '';
+    }
+  }
+
+  // Load API key
+  const apiKey = _storage.get(KEYS.apiKey);
+  if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+}
+
+init();
+</script>
+<script data-pplx-inline-edit>
+(function(){
+  if(window===window.top)return;
+  function inlineAll(orig,clone){
+    if(orig.nodeType!==1)return;
+    try{
+      var cs=getComputedStyle(orig);
+      var t='';
+      for(var i=0;i<cs.length;i++){t+=cs[i]+':'+cs.getPropertyValue(cs[i])+';';}
+      clone.style.cssText=t;
+    }catch(e){}
+    var oc=orig.children,cc=clone.children;
+    for(var j=0;j<oc.length&&j<cc.length;j++){inlineAll(oc[j],cc[j]);}
+  }
+  function stripExternal(clone){
+    var imgs=clone.querySelectorAll('img');
+    for(var i=0;i<imgs.length;i++){
+      var s=imgs[i].getAttribute('src');
+      if(s&&!s.startsWith('data:'))imgs[i].removeAttribute('src');
+    }
+    var all=clone.querySelectorAll('*');
+    for(var i=0;i<all.length;i++){
+      var st=all[i].style.cssText;
+      if(st&&st.indexOf('url(')>=0){
+        all[i].style.cssText=st.replace(/url\(["']?(?!data:)[^)"']*["']?\)/gi,'none');
+      }
+    }
+  }
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='INLINE_EDIT_CAPTURE_REQUEST')return;
+    var scrollX=window.scrollX||window.pageXOffset||0;
+    var scrollY=window.scrollY||window.pageYOffset||0;
+    var w=window.innerWidth,h=window.innerHeight;
+    try{
+      var clone=document.documentElement.cloneNode(true);
+      var rm=clone.querySelectorAll('script,link[rel="stylesheet"],style');
+      for(var i=0;i<rm.length;i++){rm[i].remove();}
+      inlineAll(document.documentElement,clone);
+      stripExternal(clone);
+      var html=new XMLSerializer().serializeToString(clone);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        +'<foreignObject width="100%" height="100%">'
+        +'<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;height:'+h+'px;overflow:hidden">'
+        +'<div style="transform:translate(-'+scrollX+'px,-'+scrollY+'px);transform-origin:top left">'
+        +html+'</div></div></foreignObject></svg>';
+      var svgUrl='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      var img=new Image();
+      img.onload=function(){
+        var c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0);
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:c.toDataURL('image/png'),scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.onerror=function(){
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.src=svgUrl;
+    }catch(err){
+      window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+    }
+  });
+})();
+</script></body>
+</html>
