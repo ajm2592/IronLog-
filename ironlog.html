@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="IronLog"/>
+<title>IRONLOG</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  :root{
+    --bg:#0d0d0f;--bg2:#141416;--bg3:#0d0d0f;
+    --border:#1e1e22;--border2:#2a2a2e;
+    --text:#e8e4dc;--muted:#666;--dim:#444;--dimmer:#333;
+    --accent:#c8f135;--danger:#f87171;--danger-bg:#3a1f1f;
+    --mono:'DM Mono','Courier New',monospace;
+    --display:'Bebas Neue','Impact',sans-serif;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);}
+  body{overflow-x:hidden;}
+
+  /* HEADER */
+  #header{
+    position:sticky;top:0;z-index:50;
+    background:var(--bg);border-bottom:1px solid var(--border);
+    padding:16px 20px 12px;
+    display:flex;align-items:flex-end;justify-content:space-between;
+  }
+  #logo{font-family:var(--display);font-size:26px;letter-spacing:3px;line-height:1;}
+  #logo span{color:var(--accent);}
+  #back-btn{
+    display:none;background:none;border:none;color:var(--muted);
+    font-family:var(--mono);font-size:12px;letter-spacing:1px;cursor:pointer;
+    padding:4px 0;margin-bottom:2px;
+  }
+  #log-count{font-size:10px;color:var(--dimmer);letter-spacing:2px;}
+
+  /* NOTIFICATION */
+  #notif{
+    display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);
+    background:var(--bg2);border:1px solid var(--border2);
+    color:var(--text);padding:10px 20px;border-radius:6px;
+    font-size:12px;letter-spacing:1px;z-index:200;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);white-space:nowrap;
+  }
+
+  /* CONTAINER */
+  .container{max-width:680px;margin:0 auto;padding:20px 16px 80px;}
+
+  /* SECTION TITLE */
+  .section-title{
+    font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;
+    margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;
+  }
+
+  /* CARDS */
+  .card{
+    background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+    padding:16px 18px;margin-bottom:10px;cursor:pointer;
+    transition:border-color 0.15s;
+  }
+  .card:hover,.card:active{border-color:var(--accent);}
+  .card-title{font-size:15px;font-weight:700;margin-bottom:3px;letter-spacing:1px;}
+  .card-meta{font-size:11px;color:var(--muted);letter-spacing:1px;}
+  .card-notes{font-size:11px;color:var(--dim);margin-top:6px;line-height:1.5;}
+  .card-arrow{font-size:18px;color:var(--border2);flex-shrink:0;align-self:center;}
+
+  /* EMPTY STATE */
+  .empty{color:var(--dim);font-size:12px;text-align:center;padding:48px 0;letter-spacing:1px;line-height:2;}
+  .empty span{color:var(--accent);}
+
+  /* BUTTONS */
+  .btn{
+    background:var(--accent);color:var(--bg);border:none;border-radius:4px;
+    padding:10px 18px;font-family:var(--mono);font-size:12px;font-weight:700;
+    letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-ghost{
+    background:none;color:var(--muted);border:1px solid var(--border2);border-radius:4px;
+    padding:8px 14px;font-family:var(--mono);font-size:11px;cursor:pointer;letter-spacing:1px;
+  }
+  .btn-danger{
+    background:none;color:var(--danger);border:1px solid var(--danger-bg);border-radius:4px;
+    padding:7px 12px;font-family:var(--mono);font-size:11px;cursor:pointer;letter-spacing:1px;
+  }
+  .btn-wide{width:100%;justify-content:center;text-align:center;padding:12px;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* FAB */
+  #fab{
+    position:fixed;bottom:24px;right:20px;
+    background:var(--accent);color:var(--bg);border:none;border-radius:40px;
+    padding:13px 22px;font-family:var(--mono);font-size:13px;font-weight:700;
+    letter-spacing:1px;cursor:pointer;box-shadow:0 4px 24px rgba(200,241,53,0.25);
+    z-index:40;
+  }
+
+  /* FORM */
+  .form-box{
+    background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+    padding:18px;margin-bottom:14px;
+  }
+  label.lbl{font-size:10px;letter-spacing:2px;color:var(--dim);display:block;margin-bottom:5px;text-transform:uppercase;}
+  input,select,textarea{
+    background:var(--bg3);border:1px solid var(--border2);color:var(--text);
+    border-radius:4px;padding:9px 12px;font-family:var(--mono);font-size:13px;
+    width:100%;outline:none;-webkit-appearance:none;
+  }
+  textarea{resize:vertical;height:68px;}
+  select{background-image:none;}
+  .form-row{display:flex;gap:10px;margin-bottom:12px;}
+  .form-row > div{flex:1;}
+  .form-row > div.narrow{flex:0 0 64px;}
+  .form-row > div.xnarrow{flex:0 0 52px;}
+  .mb{margin-bottom:12px;}
+
+  /* RPE BAR */
+  .rpe-bar{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+  .rpe-btn{
+    padding:6px 9px;border-radius:3px;border:1px solid;font-size:11px;
+    cursor:pointer;font-family:var(--mono);letter-spacing:0.5px;
+    background:transparent;transition:all 0.1s;
+  }
+  .rpe-label{font-size:10px;color:var(--dim);margin-left:6px;}
+
+  /* EXERCISE CARD */
+  .ex-card{
+    background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;margin-bottom:12px;
+  }
+  .ex-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .ex-name{font-size:15px;font-weight:700;letter-spacing:1px;margin-bottom:3px;}
+  .ex-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .ex-desc{font-size:11px;color:var(--dim);margin:8px 0 12px;line-height:1.5;}
+  .ex-actions{display:flex;gap:6px;flex-shrink:0;margin-left:10px;}
+  .chevron{font-size:12px;color:var(--dimmer);}
+
+  /* TAG */
+  .tag{
+    display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;
+    letter-spacing:1px;background:var(--border);color:var(--muted);
+  }
+  .tag-accent{background:rgba(200,241,53,0.08);color:var(--accent);}
+
+  /* SETS TABLE */
+  .sets-table{margin-bottom:12px;overflow-x:auto;}
+  .set-header,.set-row{
+    display:grid;grid-template-columns:32px 1fr 70px 1fr 70px 54px;
+    gap:6px;align-items:center;padding:6px 0;font-size:11px;
+  }
+  .set-header{font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);}
+  .set-row{border-bottom:1px solid #1a1a1c;}
+  .set-num{color:var(--dim);font-weight:700;}
+
+  /* ADD SET FORM */
+  .add-set-form{
+    background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;
+  }
+  .add-set-title{font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:10px;text-transform:uppercase;}
+
+  /* LOG DETAIL HEADER */
+  .log-detail-header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:20px;gap:12px;
+  }
+  .log-detail-title{font-size:20px;font-weight:700;letter-spacing:2px;margin-bottom:3px;}
+  .log-detail-date{font-size:11px;color:var(--dim);letter-spacing:1px;}
+  .log-detail-notes{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;}
+  .log-detail-actions{display:flex;gap:8px;flex-shrink:0;}
+
+  /* EDIT SET INLINE */
+  .edit-set-box{
+    background:var(--bg);border:1px solid var(--border2);border-radius:6px;
+    padding:10px;margin:6px 0;
+  }
+
+  /* VIEWS */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  @media(max-width:480px){
+    .set-header,.set-row{grid-template-columns:28px 1fr 60px 1fr 60px 46px;font-size:10px;}
+    .btn-ghost,.btn-danger{font-size:10px;padding:6px 10px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <button id="back-btn" onclick="goBack()">← BACK</button>
+    <div id="logo">IRON<span>LOG</span></div>
+  </div>
+  <div id="log-count">0 LOGS</div>
+</div>
+
+<div id="notif"></div>
+
+<!-- LIST VIEW -->
+<div id="view-list" class="view active">
+  <div class="container">
+    <div class="section-title">All Logs</div>
+    <div id="log-list"></div>
+  </div>
+  <button id="fab" onclick="openNewLog()">+ NEW LOG</button>
+</div>
+
+<!-- NEW / EDIT LOG VIEW -->
+<div id="view-new-log" class="view">
+  <div class="container">
+    <div class="section-title" id="log-form-title">NEW WORKOUT LOG</div>
+    <div class="form-box">
+      <div class="mb">
+        <label class="lbl">Workout Title *</label>
+        <input id="f-log-title" placeholder="e.g. Push Day A" />
+      </div>
+      <div class="mb">
+        <label class="lbl">Date</label>
+        <input id="f-log-date" type="date" />
+      </div>
+      <div>
+        <label class="lbl">Notes / Description</label>
+        <textarea id="f-log-notes" placeholder="Goals, conditions, how you felt..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="saveLog()">SAVE LOG</button>
+      <button class="btn-ghost" onclick="cancelLogForm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL VIEW -->
+<div id="view-detail" class="view">
+  <div class="container">
+    <div class="log-detail-header">
+      <div>
+        <div class="log-detail-title" id="d-title"></div>
+        <div class="log-detail-date" id="d-date"></div>
+        <div class="log-detail-notes" id="d-notes"></div>
+      </div>
+      <div class="log-detail-actions">
+        <button class="btn-ghost" onclick="editActiveLog()">EDIT</button>
+        <button class="btn-danger" onclick="deleteActiveLog()">DEL</button>
+      </div>
+    </div>
+    <div class="section-title" id="d-ex-count">Exercises · 0</div>
+    <div id="exercise-list"></div>
+    <button class="btn-ghost btn-wide" onclick="openNewExercise()">+ ADD EXERCISE</button>
+  </div>
+</div>
+
+<!-- NEW / EDIT EXERCISE VIEW -->
+<div id="view-new-exercise" class="view">
+  <div class="container">
+    <div class="section-title" id="ex-form-title">ADD EXERCISE</div>
+    <div class="form-box">
+      <div class="mb">
+        <label class="lbl">Exercise Name *</label>
+        <input id="f-ex-name" placeholder="e.g. Barbell Bench Press" />
+      </div>
+      <div class="mb">
+        <label class="lbl">Muscle Group</label>
+        <select id="f-ex-muscle">
+          <option value="">Select...</option>
+          <option>Chest</option><option>Back</option><option>Shoulders</option>
+          <option>Biceps</option><option>Triceps</option><option>Legs</option>
+          <option>Glutes</option><option>Core</option><option>Full Body</option>
+          <option>Cardio</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Notes / Description</label>
+        <textarea id="f-ex-desc" placeholder="Form cues, tempo, rest times..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="saveExercise()">SAVE EXERCISE</button>
+      <button class="btn-ghost" onclick="cancelExForm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ironlog-v1';
+let state = {
+  logs: [],
+  activeLogId: null,
+  activeExId: null, // for edit
+  editingLogId: null,
+  editingExId: null,
+  expandedEx: {},
+  editingSetInfo: null // {exId, setId}
+};
+
+// ---- PERSISTENCE ----
+function load() {
+  try { const s = localStorage.getItem(STORAGE_KEY); if(s) state.logs = JSON.parse(s); } catch{}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.logs)); } catch{}
+}
+function uid() { return Math.random().toString(36).slice(2,10); }
+function fmtDate(iso) {
+  const d = new Date(iso+'T12:00:00');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function today() { return new Date().toISOString().slice(0,10); }
+
+// ---- NOTIFY ----
+function notify(msg, type='ok') {
+  const el = document.getElementById('notif');
+  el.innerHTML = `<span style="color:${type==='ok'?'var(--accent)':'var(--danger)';margin-right:8px}">${type==='ok'?'✓':'✕'}</span> ${msg}`;
+  el.style.display = 'block';
+  el.style.borderColor = type==='ok' ? 'var(--border2)' : 'var(--danger-bg)';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.style.display='none', 2200);
+}
+
+// ---- VIEWS ----
+const VIEWS = ['list','new-log','detail','new-exercise'];
+function showView(v) {
+  VIEWS.forEach(id => {
+    document.getElementById('view-'+id).classList.toggle('active', id===v);
+  });
+  const backBtn = document.getElementById('back-btn');
+  backBtn.style.display = v === 'list' ? 'none' : 'block';
+  window.scrollTo(0,0);
+}
+
+function goBack() {
+  const active = VIEWS.find(v => document.getElementById('view-'+v).classList.contains('active'));
+  if(active==='new-log') { state.editingLogId=null; showView(state.activeLogId?'detail':'list'); renderDetail(); }
+  else if(active==='detail') { showView('list'); renderList(); }
+  else if(active==='new-exercise') { state.editingExId=null; showView('detail'); renderDetail(); }
+}
+
+// ---- LIST ----
+function renderList() {
+  const el = document.getElementById('log-list');
+  document.getElementById('log-count').textContent = state.logs.length + ' LOG' + (state.logs.length!==1?'S':'');
+  if(!state.logs.length) {
+    el.innerHTML = '<div class="empty">No workouts yet.<br><span>Press + to start logging.</span></div>';
+    return;
+  }
+  el.innerHTML = state.logs.map(log => `
+    <div class="card" onclick="openLog('${log.id}')">
+      <div style="display:flex;justify-content:space-between">
+        <div style="flex:1">
+          <div class="card-title">${esc(log.title)}</div>
+          <div class="card-meta">${fmtDate(log.date)} · ${log.exercises.length} exercise${log.exercises.length!==1?'s':''}</div>
+          ${log.notes?`<div class="card-notes">${esc(log.notes)}</div>`:''}
+        </div>
+        <div class="card-arrow">›</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ---- NEW / EDIT LOG ----
+function openNewLog() {
+  state.editingLogId = null;
+  document.getElementById('log-form-title').textContent = 'NEW WORKOUT LOG';
+  document.getElementById('f-log-title').value = '';
+  document.getElementById('f-log-date').value = today();
+  document.getElementById('f-log-notes').value = '';
+  showView('new-log');
+}
+function editActiveLog() {
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  if(!log) return;
+  state.editingLogId = log.id;
+  document.getElementById('log-form-title').textContent = 'EDIT LOG';
+  document.getElementById('f-log-title').value = log.title;
+  document.getElementById('f-log-date').value = log.date;
+  document.getElementById('f-log-notes').value = log.notes||'';
+  showView('new-log');
+}
+function saveLog() {
+  const title = document.getElementById('f-log-title').value.trim();
+  if(!title) { document.getElementById('f-log-title').focus(); return; }
+  const date = document.getElementById('f-log-date').value || today();
+  const notes = document.getElementById('f-log-notes').value.trim();
+  if(state.editingLogId) {
+    state.logs = state.logs.map(l => l.id===state.editingLogId ? {...l,title,date,notes} : l);
+    notify('Log updated!'); state.editingLogId=null;
+    save(); renderDetail(); showView('detail');
+  } else {
+    const newLog = {id:uid(),title,date,notes,exercises:[],createdAt:new Date().toISOString()};
+    state.logs.unshift(newLog); state.activeLogId=newLog.id;
+    notify('Workout log created!');
+    save(); renderDetail(); showView('detail');
+  }
+}
+function cancelLogForm() {
+  state.editingLogId=null;
+  if(state.activeLogId) { showView('detail'); } else { showView('list'); renderList(); }
+}
+function deleteActiveLog() {
+  if(!confirm('Delete this entire log?')) return;
+  state.logs = state.logs.filter(l=>l.id!==state.activeLogId);
+  state.activeLogId=null; save(); notify('Log deleted.','err'); renderList(); showView('list');
+}
+
+// ---- DETAIL ----
+function openLog(id) {
+  state.activeLogId = id;
+  state.expandedEx = {};
+  renderDetail();
+  showView('detail');
+}
+function renderDetail() {
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  if(!log) return;
+  document.getElementById('d-title').textContent = log.title;
+  document.getElementById('d-date').textContent = fmtDate(log.date);
+  document.getElementById('d-notes').textContent = log.notes||'';
+  document.getElementById('d-ex-count').textContent = `Exercises · ${log.exercises.length}`;
+  renderExercises(log);
+}
+function renderExercises(log) {
+  const el = document.getElementById('exercise-list');
+  if(!log.exercises.length) {
+    el.innerHTML = '<div class="empty" style="padding:28px 0">No exercises yet.</div>';
+    return;
+  }
+  el.innerHTML = log.exercises.map(ex => renderExCard(ex)).join('');
+}
+function rpeColor(r) {
+  if(!r) return 'var(--dim)';
+  if(r<=6) return '#4ade80'; if(r<=7) return '#facc15';
+  if(r<=8) return '#fb923c'; if(r<=9) return '#f87171'; return '#ef4444';
+}
+function rpeLabel(r) {
+  if(!r) return '—';
+  if(r<=5) return 'Easy'; if(r===6) return 'Moderate'; if(r===7) return 'Hard';
+  if(r===8) return 'Very Hard'; if(r===9) return 'Near Max'; return 'Max';
+}
+function renderExCard(ex) {
+  const isOpen = !!state.expandedEx[ex.id];
+  const editSI = state.editingSetInfo;
+  let setsHtml = '';
+  if(isOpen) {
+    let tableHtml = '';
+    if(ex.sets.length) {
+      const rows = ex.sets.map((s,i) => {
+        if(editSI && editSI.exId===ex.id && editSI.setId===s.id) {
+          return `<div class="edit-set-box" id="edit-set-box-${s.id}">
+            <div class="form-row">
+              <div class="xnarrow"><label class="lbl">Set #</label><input id="es-num-${s.id}" value="${esc(s.setNumber||String(i+1))}" style="padding:7px 8px"/></div>
+              <div><label class="lbl">Weight</label><input id="es-wt-${s.id}" value="${esc(s.weight||'')}" placeholder="135" style="padding:7px 8px"/></div>
+              <div class="narrow"><label class="lbl">Unit</label>
+                <select id="es-unit-${s.id}" style="padding:7px 4px">
+                  <option${s.unit==='lbs'?' selected':''}>lbs</option>
+                  <option${s.unit==='kg'?' selected':''}>kg</option>
+                  <option${s.unit==='bw'?' selected':''}>bw</option>
+                </select></div>
+              <div><label class="lbl">Reps</label><input id="es-reps-${s.id}" value="${esc(s.reps||'')}" placeholder="8" style="padding:7px 8px"/></div>
+            </div>
+            <div class="mb"><label class="lbl">RPE</label>
+              <div class="rpe-bar" id="es-rpe-bar-${s.id}">${rpeBarHtml('es-rpe-'+s.id, s.rpe)}</div>
+            </div>
+            <div class="btn-row">
+              <button class="btn" style="padding:8px 14px;font-size:11px" onclick="saveEditSet('${ex.id}','${s.id}')">SAVE</button>
+              <button class="btn-ghost" onclick="cancelEditSet()">CANCEL</button>
+            </div>
+          </div>`;
+        }
+        return `<div class="set-row">
+          <span class="set-num">${esc(s.setNumber||String(i+1))}</span>
+          <span>${s.weight?esc(s.weight)+' '+esc(s.unit):'—'}</span>
+          <span>${s.reps?esc(s.reps)+' reps':'—'}</span>
+          <span style="color:${rpeColor(s.rpe)};font-weight:700">${s.rpe?s.rpe+' · '+rpeLabel(s.rpe):'—'}</span>
+          <button class="btn-ghost" style="padding:4px 8px;font-size:10px" onclick="startEditSet('${ex.id}','${s.id}')">EDIT</button>
+          <button class="btn-danger" style="padding:4px 8px;font-size:10px" onclick="deleteSet('${ex.id}','${s.id}')">✕</button>
+        </div>`;
+      }).join('');
+      tableHtml = `<div class="sets-table">
+        <div class="set-header"><span>SET</span><span>WEIGHT</span><span>REPS</span><span>RPE</span><span></span><span></span></div>
+        ${rows}
+      </div>`;
+    }
+    const nextSet = ex.sets.length+1;
+    setsHtml = `
+      ${ex.description?`<div class="ex-desc">${esc(ex.description)}</div>`:''}
+      ${tableHtml}
+      <div class="add-set-form">
+        <div class="add-set-title">Log a Set</div>
+        <div class="form-row">
+          <div class="xnarrow"><label class="lbl">Set #</label><input id="s-num-${ex.id}" placeholder="${nextSet}" style="padding:7px 8px"/></div>
+          <div><label class="lbl">Weight</label><input id="s-wt-${ex.id}" placeholder="135" style="padding:7px 8px"/></div>
+          <div class="narrow"><label class="lbl">Unit</label>
+            <select id="s-unit-${ex.id}" style="padding:7px 4px">
+              <option>lbs</option><option>kg</option><option>bw</option>
+            </select></div>
+          <div><label class="lbl">Reps *</label><input id="s-reps-${ex.id}" placeholder="8" style="padding:7px 8px"/></div>
+        </div>
+        <div class="mb"><label class="lbl">RPE (Rate of Perceived Exertion)</label>
+          <div class="rpe-bar" id="rpe-bar-${ex.id}">${rpeBarHtml('rpe-'+ex.id, null)}</div>
+        </div>
+        <button class="btn" style="font-size:11px;padding:8px 14px" onclick="addSet('${ex.id}')">+ LOG SET</button>
+      </div>`;
+  }
+  return `<div class="ex-card" id="ex-card-${ex.id}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="ex-header" style="flex:1;display:block" onclick="toggleEx('${ex.id}')">
+        <div class="ex-name">${esc(ex.name)}</div>
+        <div class="ex-meta">
+          ${ex.muscleGroup?`<span class="tag">${esc(ex.muscleGroup)}</span>`:''}
+          <span class="tag tag-accent">${ex.sets.length} set${ex.sets.length!==1?'s':''}</span>
+          <span class="chevron">${isOpen?'▲':'▼'}</span>
+        </div>
+      </div>
+      <div class="ex-actions">
+        <button class="btn-ghost" onclick="openEditExercise('${ex.id}')">EDIT</button>
+        <button class="btn-danger" onclick="deleteExercise('${ex.id}')">✕</button>
+      </div>
+    </div>
+    ${isOpen?`<div style="margin-top:12px">${setsHtml}</div>`:''}
+  </div>`;
+}
+
+function rpeBarHtml(inputId, selected) {
+  return [5,6,7,8,9,10].map(v => {
+    const c = rpeColor(v);
+    const isSel = selected==v;
+    return `<button class="rpe-btn" 
+      style="color:${isSel?'#0d0d0f':c};background:${isSel?c:'transparent'};border-color:${c};font-weight:${isSel?700:400}"
+      onclick="selectRPE('${inputId}',${v},this)">${v}</button>`;
+  }).join('') + `<span class="rpe-label" id="${inputId}-label">${selected?rpeLabel(selected):'optional'}</span>
+    <input type="hidden" id="${inputId}" value="${selected||''}"/>`;
+}
+function selectRPE(inputId, val, btn) {
+  const inp = document.getElementById(inputId);
+  const cur = inp.value;
+  const newVal = cur==val ? '' : String(val);
+  inp.value = newVal;
+  // re-render bar
+  const bar = btn.closest('.rpe-bar');
+  bar.innerHTML = rpeBarHtml(inputId, newVal?Number(newVal):null);
+}
+
+function toggleEx(exId) {
+  state.expandedEx[exId] = !state.expandedEx[exId];
+  state.editingSetInfo = null;
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  renderExercises(log);
+}
+
+// ---- EXERCISE CRUD ----
+function openNewExercise() {
+  state.editingExId = null;
+  document.getElementById('ex-form-title').textContent = 'ADD EXERCISE';
+  document.getElementById('f-ex-name').value = '';
+  document.getElementById('f-ex-muscle').value = '';
+  document.getElementById('f-ex-desc').value = '';
+  showView('new-exercise');
+}
+function openEditExercise(exId) {
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  const ex = log.exercises.find(e=>e.id===exId);
+  if(!ex) return;
+  state.editingExId = exId;
+  document.getElementById('ex-form-title').textContent = 'EDIT EXERCISE';
+  document.getElementById('f-ex-name').value = ex.name;
+  document.getElementById('f-ex-muscle').value = ex.muscleGroup||'';
+  document.getElementById('f-ex-desc').value = ex.description||'';
+  showView('new-exercise');
+}
+function saveExercise() {
+  const name = document.getElementById('f-ex-name').value.trim();
+  if(!name) { document.getElementById('f-ex-name').focus(); return; }
+  const muscleGroup = document.getElementById('f-ex-muscle').value;
+  const description = document.getElementById('f-ex-desc').value.trim();
+  if(state.editingExId) {
+    state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {
+      ...l, exercises: l.exercises.map(e => e.id!==state.editingExId ? e : {...e,name,muscleGroup,description})
+    });
+    notify('Exercise updated!'); state.editingExId=null;
+  } else {
+    const newEx = {id:uid(),name,muscleGroup,description,sets:[]};
+    state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {...l, exercises:[...l.exercises,newEx]});
+    state.expandedEx[newEx.id] = true;
+    notify('Exercise added!');
+  }
+  save(); renderDetail(); showView('detail');
+}
+function cancelExForm() {
+  state.editingExId=null; showView('detail');
+}
+function deleteExercise(exId) {
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  const ex = log.exercises.find(e=>e.id===exId);
+  if(!confirm(`Remove "${ex.name}"?`)) return;
+  state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {
+    ...l, exercises: l.exercises.filter(e=>e.id!==exId)
+  });
+  delete state.expandedEx[exId];
+  save(); notify('Exercise removed.','err'); renderDetail();
+}
+
+// ---- SET CRUD ----
+function addSet(exId) {
+  const wt = document.getElementById('s-wt-'+exId)?.value.trim()||'';
+  const unit = document.getElementById('s-unit-'+exId)?.value||'lbs';
+  const reps = document.getElementById('s-reps-'+exId)?.value.trim()||'';
+  const numEl = document.getElementById('s-num-'+exId);
+  const rpeEl = document.getElementById('rpe-'+exId);
+  if(!reps) { document.getElementById('s-reps-'+exId)?.focus(); return; }
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  const ex = log.exercises.find(e=>e.id===exId);
+  const setNum = numEl?.value.trim() || String((ex.sets.length||0)+1);
+  const rpe = rpeEl?.value ? Number(rpeEl.value) : null;
+  const newSet = {id:uid(),setNumber:setNum,weight:wt,unit,reps,rpe};
+  state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {
+    ...l, exercises: l.exercises.map(e => e.id!==exId ? e : {...e, sets:[...e.sets,newSet]})
+  });
+  save(); notify('Set logged!');
+  // preserve weight/unit, clear reps/rpe/setNumber
+  const savedWt = wt; const savedUnit = unit;
+  renderDetail();
+  // restore weight
+  const wtEl2 = document.getElementById('s-wt-'+exId);
+  if(wtEl2) wtEl2.value = savedWt;
+  const unitEl2 = document.getElementById('s-unit-'+exId);
+  if(unitEl2) unitEl2.value = savedUnit;
+}
+
+function startEditSet(exId, setId) {
+  state.editingSetInfo = {exId, setId};
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  renderExercises(log);
+}
+function cancelEditSet() {
+  state.editingSetInfo = null;
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  renderExercises(log);
+}
+function saveEditSet(exId, setId) {
+  const numEl = document.getElementById('es-num-'+setId);
+  const wtEl = document.getElementById('es-wt-'+setId);
+  const unitEl = document.getElementById('es-unit-'+setId);
+  const repsEl = document.getElementById('es-reps-'+setId);
+  const rpeEl = document.getElementById('es-rpe-'+setId);
+  const updates = {
+    setNumber: numEl?.value||'',
+    weight: wtEl?.value.trim()||'',
+    unit: unitEl?.value||'lbs',
+    reps: repsEl?.value.trim()||'',
+    rpe: rpeEl?.value ? Number(rpeEl.value) : null
+  };
+  state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {
+    ...l, exercises: l.exercises.map(e => e.id!==exId ? e : {
+      ...e, sets: e.sets.map(s => s.id!==setId ? s : {...s,...updates})
+    })
+  });
+  state.editingSetInfo = null;
+  save(); notify('Set updated!');
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  renderExercises(log);
+}
+function deleteSet(exId, setId) {
+  state.logs = state.logs.map(l => l.id!==state.activeLogId ? l : {
+    ...l, exercises: l.exercises.map(e => e.id!==exId ? e : {
+      ...e, sets: e.sets.filter(s=>s.id!==setId)
+    })
+  });
+  save(); notify('Set removed.','err');
+  const log = state.logs.find(l=>l.id===state.activeLogId);
+  renderExercises(log);
+}
+
+// ---- INIT ----
+load();
+renderList();
+document.getElementById('f-log-date').value = today();
+</script>
+</body>
+</html>
